@@ -2,7 +2,7 @@
 
 Stelace helps entrepreneurs create online marketplaces and communities in no time to let them focus on experimenting and growing their audience.
 
-This repository includes all marketplace features and integrations. Stelace Artificial Intelligence assistance, automatic setup and cloud hosting are also available [without a line of code](https://stelace.com).
+This repository includes all marketplace features and integrations. Stelace Artificial Intelligence assistance, automatic setup, APIs, webhooks and cloud hosting are also available [without a line of code](https://stelace.com).
 
 ---
 
@@ -18,38 +18,35 @@ Stelace is under active development, with *massive* ongoing updates.
 
 ## Contents
 
-<!-- TOC -->
-
-- [Stelace](#stelace)
-    - [Warning](#warning)
-    - [Contents](#contents)
-    - [Features](#features)
-    - [Environment](#environment)
-        - [Install environment](#install-environment)
-            - [Install Node.js](#install-nodejs)
-                - [Node version warning](#node-version-warning)
-                - [Node.js global dependencies](#nodejs-global-dependencies)
-            - [Install MySQL](#install-mysql)
-            - [Install GraphicsMagick](#install-graphicsmagick)
-            - [Install local dependencies](#install-local-dependencies)
-        - [Configure environment](#configure-environment)
-            - [Create the MySQL database](#create-the-mysql-database)
-            - [Create the local config](#create-the-local-config)
-            - [PhantomJS symbolic link](#phantomjs-symbolic-link)
-        - [Run environment](#run-environment)
-        - [Update environment](#update-environment)
-        - [Backup database](#backup-database)
-            - [Export the MySQL database](#export-the-mysql-database)
-            - [Import the MySQL database](#import-the-mysql-database)
-    - [Ongoing](#ongoing)
-    - [Open source alternatives](#open-source-alternatives)
-    - [License](#license)
-
-<!-- /TOC -->
+- [Warning](#warning)
+- [Contents](#contents)
+- [Features](#features)
+- [Environment](#environment)
+    - [Install](#install)
+        - [Install Node.js](#install-nodejs)
+            - [Node version warning](#node-version-warning)
+            - [Node.js global dependencies](#nodejs-global-dependencies)
+        - [Install MySQL](#install-mysql)
+        - [Install GraphicsMagick](#install-graphicsmagick)
+        - [Install local dependencies](#install-local-dependencies)
+    - [Configure](#configure)
+        - [Create the MySQL database](#create-the-mysql-database)
+        - [Create the local config](#create-the-local-config)
+        - [Run init scripts](#run-init-scripts)
+        - [PhantomJS symbolic link](#phantomjs-symbolic-link)
+    - [Run](#run)
+    - [Update](#update)
+- [Administration](#administration)
+    - [Backup database](#backup-database)
+        - [Export the MySQL database](#export-the-mysql-database)
+        - [Import the MySQL database](#import-the-mysql-database)
+- [Ongoing](#ongoing)
+- [Open source alternatives](#open-source-alternatives)
+- [License](#license)
 
 ## Features
 
-Everything but [Stelace AI](https://stelace.com), including:
+Everything but [Stelace AI and dashboard](https://stelace.com), including:
 
 - Listing management
 - Delayed payments (Stripe / Mangopay)
@@ -59,17 +56,20 @@ Everything but [Stelace AI](https://stelace.com), including:
 - Booking calendars
 - Flexible listing types and workflows
 - Validation steps
-- User ratings & public accounts
+- User ratings & public profiles
 - Gamification
 - Messaging
 - Emailing
 - Angular templates
 - Translations
+- Backoffice with admin rights
+- API
+- Webhooks
 - …
 
 
 ## Environment
-### Install environment
+### Install
 
 Instructions are given for Ubuntu 16.04 LTS but should not vary so much in other Unix environments.
 #### Install Node.js
@@ -81,7 +81,7 @@ To install a specific version or switch to a pre-installed version:
 
     sudo n [version]
 
-> Recommended version: Node 8
+> Recommended version: Node 8.9.x LTS
 
 To list all possible versions of Node:
 
@@ -149,7 +149,7 @@ password: [pwd]
     npm install
     bower install
 
-### Configure environment
+### Configure
 
 #### Create the MySQL database
 
@@ -185,6 +185,12 @@ snapshotsDir: "/path/to/project-external/snapshots"
 - Uncomment `migrate: "safe"` option after populating database with first `sails lift` command, to speed up sails start
 >Start once with "alter" when some model changes
 
+#### Run init scripts
+
+Customize locally and execute the following scripts from the root of the project:
+
+    node scripts_migration/createStelaceConfig.js
+    node scripts_migration/createListingTypes.js
 
 #### PhantomJS symbolic link
 
@@ -194,7 +200,7 @@ snapshotsDir: "/path/to/project-external/snapshots"
 
 
 
-### Run environment
+### Run
 
 Open 2 terminals: 1 for client-side and 1 for server-side.
 
@@ -228,8 +234,7 @@ https://stackoverflow.com/questions/16748737/grunt-watch-error-waiting-fatal-err
 
 
 
-
-### Update environment
+### Update
 
 May be useful when breaking things:
 
@@ -251,6 +256,10 @@ May be useful when breaking things:
 
 
 
+## Administration
+
+After creating your own first user, set your user.role to 'admin' in the database. Create your listing categories to start posting listings.
+
 ### Backup database
 
 #### Export the MySQL database
@@ -264,6 +273,7 @@ Using mysqldump for exporting "small" dataset is ok (< 10GB).
 
     mysql -u [user] -p --default-character-set=utf8mb4 [database_name] < [filename].sql
 
+
 ## Ongoing
 
 - Easier environment setup with docker and setup tools
@@ -272,8 +282,8 @@ Using mysqldump for exporting "small" dataset is ok (< 10GB).
 - Docs
 
 ## Open source alternatives
-- [Sharetribe](https://github.com/sharetribe/sharetribe)
-- [Cocorico](https://github.com/Cocolabs-SAS/cocorico)
+- [Sharetribe](https://github.com/sharetribe/sharetribe) (Ruby)
+- [Cocorico](https://github.com/Cocolabs-SAS/cocorico) (PHP)
 - *Add yours*
 
 ## License
