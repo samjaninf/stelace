@@ -41,6 +41,7 @@
 
 config/local.js
 crons/env
+.env
 
 
 
@@ -133,3 +134,4 @@ emailTests/**/*
 !emailTests/.gitkeep
 translations/**/*
 !translations/**/user_example.yaml
+external-files
