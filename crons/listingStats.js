@@ -20,7 +20,8 @@ Sails.load({
     hooks: {
         grunt: false,
         sockets: false,
-        pubsub: false
+        pubsub: false,
+        orm: false,
     }
 }, function (err, sails) {
     if (err) {

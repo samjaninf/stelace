@@ -3,7 +3,12 @@
   "private": true,
   "version": "0.0.1",
   "description": "Smart marketplace launcher",
-  "keywords": ["marketplace", "API", "platform", "entrepreneur"],
+  "keywords": [
+    "marketplace",
+    "API",
+    "platform",
+    "entrepreneur"
+  ],
   "homepage": "https://stelace.com",
   "license": "GPL-3.0",
   "author": "Stelace Team",
@@ -12,8 +17,8 @@
     "type": "git",
     "url": "https://github.com/stelace/stelace"
   },
-  "engines" : {
-    "node" : ">=8.4"
+  "engines": {
+    "node": ">=8.4"
   },
   "browserslist": [
     "> 1%",
@@ -77,6 +82,7 @@
     "mandrill-api": "1.0.45",
     "mkdirp": "0.5.1",
     "moment": "2.11.2",
+    "mongoose": "4.13.0",
     "node-cache": "3.2.1",
     "nodemailer": "0.7.1",
     "passport": "0.3.2",

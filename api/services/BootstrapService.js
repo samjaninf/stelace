@@ -10,10 +10,41 @@ var moment                  = require('moment');
 var areIntlLocalesSupported = require('intl-locales-supported');
 var IntlPolyfill            = require('intl');
 
+const mongoose = require('mongoose');
+const Promise = require('bluebird');
+
+mongoose.Promise = Promise;
+
+let mongoConnected = false;
+
+const initMongoose = () => {
+    if (mongoConnected) return;
+
+    const mongoConfig = sails.config.connections.MongoDB;
+
+    const options = { useMongoClient: true };
+    if (process.env.NODE_ENV === 'production' || ! mongoConfig.autoIndex) {
+        options.autoIndex = false;
+    }
+
+    const connectionQuery = `mongodb://${mongoConfig.host}/${mongoConfig.database}`;
+    if (mongoConfig.user) {
+        options.auth = {
+            user: mongoConfig.user,
+            password: mongoConfig.password,
+        };
+    }
+
+    mongoose.connect(connectionQuery, options);
+
+    mongoConnected = true;
+};
+
 function init(initFields, args) {
     var defaultFields = [
         "uncaughtException",
         "errors",
+        "mongo",
         "mangopay",
         "utilities",
         "useProxy",
@@ -35,6 +66,10 @@ function init(initFields, args) {
 
             case "errors":
                 ErrorService.init();
+                break;
+
+            case "mongo":
+                initMongoose();
                 break;
 
             case "mangopay":

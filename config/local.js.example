@@ -62,6 +62,15 @@ module.exports = {
     },
 
     connections: {
+        MongoDB: {
+            host: 'localhost',
+            port: 27017,
+            user: '',
+            password: '',
+            database: 'stelace',
+            autoIndex: false,
+        },
+
         MySQLServer: {
             adapter: 'sails-mysql',
             host: 'localhost',
