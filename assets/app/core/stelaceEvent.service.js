@@ -23,7 +23,7 @@
         function activate() {
             var body = document.body;
 
-            var id    = parseInt(body.getAttribute("data-session-id"), 10);
+            var id    = body.getAttribute("data-session-id");
             var token = body.getAttribute("data-session-token");
             var ver   = parseInt(body.getAttribute("data-ux-version"), 10);
 

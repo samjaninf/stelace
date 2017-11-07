@@ -81,7 +81,7 @@ BookingTransactionManager.prototype.isTransactionCancelled = function (transacti
 
 BookingTransactionManager.prototype.getCancelTransaction = function (transaction) {
     return _.find(this.rawTransactions, t => {
-        return t.id === this.hashCancelledBy[transaction.id];
+        return µ.isSameId(t.id, this.hashCancelledBy[transaction.id]);
     });
 };
 

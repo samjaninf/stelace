@@ -1,4 +1,10 @@
-/* global EmailHelperService, EmailLog, EmailTracking, EmailUtmService, LoggerService, UrlService, User */
+/* global EmailHelperService, EmailUtmService, LoggerService, UrlService */
+
+const {
+    EmailLog,
+    EmailTracking,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -84,7 +90,7 @@ async function sendSimpleEmail({
  * Send HTML email
  * @param {string}   html
  * @param {string}   [text] - alternate version of html for not-supported mail client
- * @param {number}   [userId] - the receiver user id
+ * @param {ObjectId}   [userId] - the receiver user id
  * @param {string}   fromEmail
  * @param {string}   [fromName]
  * @param {string}   toEmail
@@ -409,7 +415,7 @@ async function getTrackingStats(emailLogs) {
 
     const emailTrackings = await EmailTracking
         .find({
-            or: [
+            $or: [
                 { mandrillMessageId: mandrillMessagesIds },
                 { sparkpostTransmissionId: sparkpostTransmissionsIds },
             ],

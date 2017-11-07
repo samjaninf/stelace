@@ -1,4 +1,10 @@
-/* global GamificationService, Listing, Location, User, IPService, MapService */
+/* global GamificationService, IPService, MapService */
+
+const {
+    Listing,
+    Location,
+    User,
+} = require('../models_new');
 
 /**
  * LocationController
@@ -72,8 +78,8 @@ function create(req, res) {
                 throw new BadRequestError("max locations reached");
             }
 
-            var identicalLocation = _.find(locations, {
-                remoteId: createAttrs.remoteId
+            var identicalLocation = _.find(locations, location => {
+                return µ.isSameId(location.remoteId, createAttrs.remoteId);
             });
             if (identicalLocation) {
                 throw new BadRequestError("identical location");
@@ -103,7 +109,7 @@ function create(req, res) {
         .catch(res.sendError);
 }
 
-function update(req, res) {
+async function update(req, res) {
     var id = req.param("id");
     var access = "self";
     var filteredAttrs = [
@@ -133,21 +139,22 @@ function update(req, res) {
         return res.badRequest();
     }
 
-    return Promise
-        .resolve()
-        .then(() => {
-            return Location.updateOne(
-                {
-                    id: id,
-                    userId: req.user.id
-                },
-                updateAttrs
-            );
-        })
-        .then(location => {
-            res.json(Location.expose(location, access));
-        })
-        .catch(res.sendError);
+    try {
+        let location = await Location.findById(id);
+        if (!location) {
+            throw new NotFoundError();
+        }
+        if (!µ.isSameId(location.userId, req.user.id)) {
+            throw new ForbiddenError();
+        }
+
+        location = _.assign(location, updateAttrs);
+        location = await location.save();
+
+        res.json(Location.expose(location, access));
+    } catch (err) {
+        res.sendError(err);
+    }
 }
 
 function updateMain(req, res) {
@@ -156,13 +163,13 @@ function updateMain(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return Location.findOne({ id: id });
+            return Location.findById(id);
         })
         .then(location => {
             if (! location) {
                 throw new NotFoundError();
             }
-            if (location.userId !== req.user.id) {
+            if (!µ.isSameId(location.userId, req.user.id)) {
                 throw new ForbiddenError();
             }
 
@@ -181,7 +188,7 @@ function updateMain(req, res) {
                 return;
             }
         })
-        .then(() => res.json({ id: id }))
+        .then(() => res.json({ id }))
         .catch(res.sendError);
 
 
@@ -200,62 +207,49 @@ function updateMain(req, res) {
                     );
             })
             .then(() => {
-                return Location.updateOne(location.id, { main: true });
+                return Location.findByIdAndUpdate(location.id, { main: true }, { new: true });
             });
     }
 }
 
-function destroy(req, res) {
-    var id = parseInt(req.param("id"), 10);
+async function destroy(req, res) {
+    var id = req.param("id");
 
-    return Promise
-        .resolve()
-        .then(() => {
-            return [
-                Location.findOne({ id: id })
-            ];
-        })
-        .spread((location) => {
-            if (! location) {
-                throw new NotFoundError();
-            }
-            if (location.userId !== req.user.id) {
-                throw new ForbiddenError();
-            }
-            if (location.main) {
-                throw new BadRequestError("cannot destroy a main location");
-            }
+    try {
+        const location = await Location.findById(id);
+        if (! location) {
+            throw new NotFoundError();
+        }
+        if (!µ.isSameId(location.userId, req.user.id)) {
+            throw new ForbiddenError();
+        }
+        if (location.main) {
+            throw new BadRequestError("cannot destroy a main location");
+        }
 
-            return [
-                location,
-                Listing.find({ ownerId: req.user.id })
-            ];
-        })
-        .spread((location, listings) => {
-            if (listings.length) {
-                return removeLocationFromListings(id, listings);
-            } else {
-                return;
-            }
-        })
-        .then(() => {
-            return Location.destroy({ id: id });
-        })
-        .then(() => res.json({ id: id }))
-        .catch(res.sendError);
+        const listings = await Listing.find({ ownerId: req.user.id });
+        if (listings.length) {
+            await removeLocationFromListings(id, listings);
+        }
+
+        await location.remove();
+
+        res.json({ id });
+    } catch (err) {
+        res.sendError(err);
+    }
 
 
 
     function removeLocationFromListings(id, listings) {
-        return Promise
-            .resolve(listings)
-            .each(listing => {
-                if (! listing.locations || ! listing.locations.length) {
-                    return;
-                }
+        return Promise.map(listings, listing => {
+            if (!listing.locations || !listing.locations.length) {
+                return;
+            }
 
-                return Listing.updateOne(listing.id, { locations: _.without(listing.locations, id) });
-            });
+            listing.locations = _.without(listing.locations, id);
+            return listing.save();
+        });
     }
 }
 

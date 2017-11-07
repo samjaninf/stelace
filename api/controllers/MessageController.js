@@ -1,4 +1,15 @@
-/* global Assessment, Booking, Cancellation, Conversation, Listing, Location, Message, ToolsService, User */
+/* global ToolsService */
+
+const {
+    Assessment,
+    Booking,
+    Cancellation,
+    Conversation,
+    Listing,
+    Location,
+    Message,
+    User,
+} = require('../models_new');
 
 /**
  * MessageController
@@ -11,11 +22,7 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
     create: create,
-    update: update,
-    destroy: destroy,
 
     conversation: conversation,
     conversationMeta: conversationMeta,
@@ -26,18 +33,6 @@ module.exports = {
 };
 
 var moment = require('moment');
-
-// Standard functions
-
-function find(req, res) {
-    //
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    //
-    return res.forbidden();
-}
 
 function create(req, res) {
     var filteredAttrs = [
@@ -65,17 +60,6 @@ function create(req, res) {
         .catch(res.sendError);
 }
 
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
-
-
-// Custom functions
-
 function conversation(req, res) {
     var conversationId = req.param("conversationId");
     var access = "others";
@@ -97,7 +81,7 @@ function conversation(req, res) {
             }
 
             var isSelf = _.find(messages, function (message) {
-                return req.user.id === message.senderId || req.user.id === message.receiverId;
+                return µ.isSameId(req.user.id, message.senderId) || µ.isSameId(req.user.id, message.receiverId);
             });
 
             if (isSelf) {
@@ -124,15 +108,15 @@ function conversationMeta(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return Conversation.findOne({ id: conversationId });
+            return Conversation.findById(conversationId);
         })
         .then(conversation => {
             if (! conversation) {
                 throw new NotFoundError();
             }
 
-            isSender   = req.user && (req.user.id === conversation.senderId);
-            isReceiver = req.user && (req.user.id === conversation.receiverId);
+            isSender   = req.user && µ.isSameId(req.user.id, conversation.senderId);
+            isReceiver = req.user && µ.isSameId(req.user.id, conversation.receiverId);
 
             if (isSender || isReceiver) {
                 access = "self";
@@ -140,10 +124,10 @@ function conversationMeta(req, res) {
 
             return [
                 conversation,
-                conversation.senderId ? User.findOne({ id: conversation.senderId }) : null,
-                conversation.receiverId ? User.findOne({ id: conversation.receiverId }) : null,
+                conversation.senderId ? User.findById(conversation.senderId) : null,
+                conversation.receiverId ? User.findById(conversation.receiverId) : null,
                 conversation.receiverId ? Location.find({ userId: conversation.receiverId }) : null,
-                conversation.bookingId ? Booking.findOne({ id: conversation.bookingId }) : null
+                conversation.bookingId ? Booking.findById(conversation.bookingId) : null
             ];
         })
         .spread((conversation, sender, receiver, receiverLocations, booking) => {
@@ -218,7 +202,7 @@ function getConversations(req, res) {
 
     if (findAttrs.userId) {
         findAttrs = {
-            or: [
+            $or: [
                 { senderId: findAttrs.userId },
                 { receiverId: findAttrs.userId }
             ]
@@ -268,9 +252,9 @@ function getConversations(req, res) {
                 var bookingIds = _.uniq(_.pluck(conversations, "bookingId"));
 
                 return [
-                    Assessment.find({ id: assessmentsIds }),
+                    Assessment.find({ _id: assessmentsIds }),
                     Listing.getListingsOrSnapshots(listingsIds),
-                    Booking.find({ id: bookingIds })
+                    Booking.find({ _id: bookingIds })
                 ];
             })
             .spread((assessments, listings, bookings) => {
@@ -354,7 +338,7 @@ function getPublicMessages(req, res) {
             return Message
                 .find({
                     conversationId: conversationIds,
-                    publicContent: { '!': null }
+                    publicContent: { $ne: null }
                 })
                 .sort({
                     conversationId: -1,
@@ -376,8 +360,8 @@ function _populateUsers(conversationsOrMessages, access) {
         .resolve()
         .then(() => {
             return [
-                User.find({ id: _.pluck(conversationsOrMessages, "senderId") }),
-                User.find({ id: _.pluck(conversationsOrMessages, "receiverId") })
+                User.find({ _id: _.pluck(conversationsOrMessages, "senderId") }),
+                User.find({ _id: _.pluck(conversationsOrMessages, "receiverId") })
             ];
         })
         .spread((senders, receivers) => {
@@ -415,6 +399,8 @@ function _populateUsers(conversationsOrMessages, access) {
 }
 
 function _populateBookings(messages, access) {
+    const rawMessages = messages.map(message => message.toJSON());
+
     var bookingIds = _.compact(_.pluck(messages, "bookingId"));
 
     if (! bookingIds.length) {
@@ -424,21 +410,21 @@ function _populateBookings(messages, access) {
     return Promise
         .resolve()
         .then(() => {
-            return Booking.find({ id: bookingIds });
+            return Booking.find({ _id: bookingIds });
         })
         .then(bookings => {
             var cancellationIds = _.compact(_.pluck(bookings, "cancellationId"));
 
             return [
                 bookings,
-                Cancellation.find({ id: cancellationIds })
+                Cancellation.find({ _id: cancellationIds })
             ];
         })
         .spread((bookings, cancellations) => {
             var hashBookings      = _.indexBy(bookings, "id");
             var hashCancellations = _.indexBy(cancellations, "id");
 
-            _.forEach(messages, function (message) {
+            _.forEach(rawMessages, function (message) {
                 var booking = message.bookingId ? hashBookings[message.bookingId] : null;
 
                 if (booking) {
@@ -454,7 +440,7 @@ function _populateBookings(messages, access) {
                 }
             });
 
-            return messages;
+            return rawMessages;
         });
 }
 
@@ -485,7 +471,7 @@ function markAsRead(req, res) {
 
     function updateMessage() {
         return Message
-            .updateOne(id, _.pick(updateAttrs, "read"))
+            .findByIdAndUpdate(id, _.pick(updateAttrs, "read"), { new: true })
             .then(message => {
                 return Message.expose(message, "self");
             });
@@ -496,7 +482,7 @@ function markAsRead(req, res) {
             .resolve()
             .then(() => {
                 return [
-                    Conversation.updateOne(id, _.pick(updateAttrs, ["receiverRead", "senderRead"])),
+                    Conversation.findByIdAndUpdate(id, _.pick(updateAttrs, ["receiverRead", "senderRead"]), { new: true }),
                     Message.update({ conversationId: id }, _.pick(updateAttrs, "read"))
                 ];
             })
@@ -523,7 +509,7 @@ function updateMeta(req, res) {
     updateAttrs.newContentDate = moment().toISOString();
 
     return Conversation
-        .updateOne(id, updateAttrs)
+        .findByIdAndUpdate(id, updateAttrs, { new: true })
         .then(conversation => {
             res.json(Conversation.expose(conversation, "self"));
         })

@@ -1,9 +1,17 @@
-/* global Assessment, Booking, BootstrapService, GamificationService, Listing, LoggerService, Rating, User */
+/* global BootstrapService, GamificationService, LoggerService */
 
 var Sails = require('sails');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Assessment,
+    Booking,
+    Listing,
+    Rating,
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {

@@ -1,8 +1,15 @@
 /* global
-    ElasticsearchService, Listing, ListingCategory, Location,
-    MapService, Media, PricingService, SearchEvent,
-    StelaceConfigService, StelaceEventService, UAService, User
+    ElasticsearchService, MapService, PricingService, StelaceConfigService, StelaceEventService, UAService
 */
+
+const {
+    Listing,
+    ListingCategory,
+    Location,
+    Media,
+    SearchEvent,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -81,6 +88,7 @@ async function getListingsFromQuery(searchQuery, type) {
         listingsRelevance = await getListingsRelevance(query);
         // console.log('relevant listings', listingsRelevance.length);
         listingsRelevanceMeta = getListingsRelevanceMeta(listingsRelevance);
+
         listings = mergePublishedAndQueryListings(listings, listingsRelevance);
         // console.log('merged published and relevant listings', listings.length);
     }
@@ -169,26 +177,27 @@ async function fetchPublishedListings(searchQuery, { listingCategoriesIds }) {
         validated: true,
         broken: false,
         locked: false,
+        quantity: { $gt: 0 },
     };
 
     if (listingCategoriesIds) {
         findAttrs.listingCategoryId = listingCategoriesIds;
     }
     if (withoutIds) {
-        findAttrs.id = { '!': withoutIds };
+        findAttrs._id = { $nin: withoutIds };
     }
+
+    let sortAttrs;
 
     if (sorting === "creationDate") {
-        findAttrs.sort = { createdDate: -1 };
+        sortAttrs = { createdDate: -1 };
     } else if (sorting === "lastUpdate") {
-        findAttrs.sort = { updatedDate: -1 };
+        sortAttrs = { updatedDate: -1 };
     } else {
-        findAttrs.sort = { id: -1 };
+        sortAttrs = { _id: -1 };
     }
 
-    findAttrs.quantity = { '>': 0 };
-
-    let listings = await Listing.find(findAttrs);
+    let listings = await Listing.find(findAttrs).sort(sortAttrs);
 
     if (!listingTypeId) {
         return listings;
@@ -196,7 +205,7 @@ async function fetchPublishedListings(searchQuery, { listingCategoriesIds }) {
 
     listings = _.filter(listings, listing => {
         return _.reduce(listing.listingTypesIds, (memo, id) => {
-            if (listingTypeId === id) {
+            if (µ.isSameId(listingTypeId, id)) {
                 return true;
             }
             return memo;
@@ -211,7 +220,7 @@ async function fetchPublishedListings(searchQuery, { listingCategoriesIds }) {
  * @param  {string}   query
  * @param  {boolean}  getSimilar
  * @return {object[]} results
- * @return {number}   results.id - listing id
+ * @return {ObjectId}   results.id - listing id
  * @return {float}    results.score - relevance score
  */
 async function getListingsRelevance(query) {
@@ -235,7 +244,7 @@ function formatElasticsearchResults(res) {
 
     return _.map(res.hits.hits, value => {
         return {
-            id: parseInt(value._id, 10), // convert from string to number
+            id: value._id,
             score: value._score,
             source: value._source,
         };
@@ -259,8 +268,8 @@ function getListingsRelevanceMeta(listingsRelevance) {
 }
 
 function mergePublishedAndQueryListings(listings, queryListings) {
-    const listingsIds = _.pluck(listings, 'id');
-    const queryListingsIds = _.map(queryListings, value => value.id);
+    const listingsIds = _.pluck(listings, 'id').map(µ.getObjectIdString);
+    const queryListingsIds = _.map(queryListings, value => µ.getObjectIdString(value.id));
 
     const mergedIds = _.intersection(listingsIds, queryListingsIds);
     const indexedMergedIds = _.indexBy(mergedIds);
@@ -303,7 +312,7 @@ async function _getListingsLocations(listings) {
     }, []);
     locationIds = _.uniq(locationIds);
 
-    return await Location.find({ id: locationIds });
+    return await Location.find({ _id: locationIds });
 }
 
 /**
@@ -322,7 +331,7 @@ function removeEmptyLocationListings(listings, hashLocations) {
 /**
  * Remove key from hashLocations that isn't present in list listingsIds
  * @param  {object}   hashLocations [description]
- * @param  {number[]} listingsIds
+ * @param  {ObjectId[]} listingsIds
  * @return {object}   refreshed hash locations
  */
 function refreshHashLocations(hashLocations, listingsIds) {
@@ -335,7 +344,7 @@ function refreshHashLocations(hashLocations, listingsIds) {
  * @param  {object}   hashJourneys
  * @param  {object[]} listingsRelevance
  * @return {object[]} res - combined metrics listings
- * @return {number}   res.id - listing id
+ * @return {ObjectId}   res.id - listing id
  * @return {number}   res.duration
  * @return {float}    res.score
  */
@@ -465,7 +474,7 @@ async function getListingsExtraInfo({ listings, getMedia }) {
     let owners;
 
     if (getMedia) {
-        owners = await User.find({ id: ownersIds });
+        owners = await User.find({ _id: ownersIds });
         infoPromises.push(User.getMedia(owners));
     } else {
         infoPromises.push({});
@@ -575,13 +584,14 @@ function filterListingsWithinDistance(fromLocations, listings, hashLocations, wi
     return _.reduce(listings, (memo, listing) => {
         // security in case listings has no locations
         var toLocations = hashLocations[listing.id];
+        console.log('to locations', toLocations )
         if (! toLocations || ! toLocations.length) {
             return memo;
         }
 
         var nearLocations = _.reduce(fromLocations, (memo, fromLocation) => {
             var isNearDistance = _.find(toLocations, toLocation => {
-                return geolib.getDistance(fromLocation, toLocation) <= withinDistanceLimitMeters;
+                return geolib.getDistance(fromLocation, toLocation.toJSON()) <= withinDistanceLimitMeters;
             });
             if (isNearDistance) {
                 memo.push(fromLocation);
@@ -615,7 +625,7 @@ function setListingsToCache(cacheKey, listings) {
 /**
  * Normalize the search parameters
  * @param {object}   params
- * @param {number}   [params.listingCategoryId]
+ * @param {ObjectId}   [params.listingCategoryId]
  * @param {string}   [params.query]
  * @param {string}   [params.listingTypeId]
  * @param {boolean}  [params.onlyFree] // disabled for now
@@ -625,8 +635,8 @@ function setListingsToCache(cacheKey, listings) {
  * @param {float}    params.locations.latitude
  * @param {float}    params.locations.longitude
  * @param {string}   [params.sorting]
- * @param {number[]} [params.withoutIds] - filter out listings with this ids (useful for similar listings)
- * @param {number[]} [params.similarToListingsIds]
+ * @param {ObjectId[]} [params.withoutIds] - filter out listings with this ids (useful for similar listings)
+ * @param {ObjectId[]} [params.similarToListingsIds]
  * @param {number}   [params.page]
  * @param {number}   [params.limit]
  * @param {number}   [params.timestamp] - useful to prevent requests racing from client-side
@@ -661,6 +671,9 @@ function normalizeSearchQuery(params) {
 
             case 'listingTypeId':
             case 'listingCategoryId':
+                isValid = µ.isMongoId(value);
+                break;
+
             case 'timestamp':
                 isValid = !isNaN(value);
                 break;
@@ -675,7 +688,7 @@ function normalizeSearchQuery(params) {
 
             case 'withoutIds':
             case 'similarToListingsIds':
-                isValid = µ.checkArray(value, 'id');
+                isValid = µ.checkArray(value, 'mongoId');
                 break;
 
             // case 'onlyFree':

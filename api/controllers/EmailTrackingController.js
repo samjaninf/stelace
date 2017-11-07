@@ -1,4 +1,8 @@
-/* global EmailTracking, EmailTrackingService, ToolsService */
+/* global EmailTrackingService, ToolsService */
+
+const {
+    EmailTracking,
+} = require('../models_new');
 
 /**
  * EmailTrackingController
@@ -9,28 +13,10 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     sparkpost,
     mandrill,
 
 };
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
 
 async function sparkpost(req, res) {
     if (req.method === 'HEAD') {
@@ -118,12 +104,3 @@ function mandrill(req, res) {
     })()
     .catch(res.sendError);
 }
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
-

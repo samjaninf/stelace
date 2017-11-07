@@ -1,4 +1,4 @@
-/* global BootstrapService, EmailTemplateService, GamificationEvent, GamificationService, LoggerService, User */
+/* global BootstrapService, EmailTemplateService, GamificationService, LoggerService */
 
 var Sails  = require('sails');
 var moment = require('moment');
@@ -7,6 +7,11 @@ var cronTaskName = "sendGamificationStepsEmail";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    GamificationEvent,
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -37,7 +42,7 @@ Sails.load({
         .resolve()
         .then(() => {
             return GamificationEvent.find({
-                createdDate: { '>': limitDate },
+                createdDate: { $gt: limitDate },
                 type: "level"
             });
         })
@@ -45,7 +50,7 @@ Sails.load({
             var usersIds = _.pluck(gamificationEvents, "userId");
 
             return [
-                User.find({ id: usersIds }),
+                User.find({ _id: usersIds }),
                 gamificationEvents
             ];
         })

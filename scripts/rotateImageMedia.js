@@ -1,4 +1,4 @@
-/* global BootstrapService, Media */
+/* global BootstrapService */
 
 var Sails = require('sails');
 var fs    = require('fs');
@@ -9,15 +9,19 @@ var gm    = require('gm');
 global._       = require('lodash');
 global.Promise = require('bluebird');
 
+const {
+    Media,
+} = require('../api/models_new');
+
 var argv = yargs
-            .usage("Usage: $0 --mediaId [num] (--cw [num] | --ccw [num])")
+            .usage("Usage: $0 --mediaId [ObjectId] (--cw [num] | --ccw [num])")
             .demand("mediaId")
             .choices("cw", [1, 2, 3])
             .choices("ccw", [1, 2, 3])
             .argv;
 
-if (argv.mediaId !== parseInt(argv.mediaId, 10)) {
-    console.log("mediaId argument must be a number");
+if (!argv.mediaId) {
+    console.log("mediaId argument must be defined");
     process.exit();
 }
 if (! argv.cw && ! argv.ccw) {
@@ -52,7 +56,7 @@ Sails.load({
     Promise
         .resolve()
         .then(() => {
-            return Media.findOne({ id: mediaId });
+            return Media.findById(mediaId);
         })
         .then(media => {
             if (! media) {
@@ -96,7 +100,7 @@ Sails.load({
             return [
                 media,
                 fs.renameAsync(tmpFilepath, filepath),
-                Media.updateOne(media.id, newDimensions)
+                Media.findByIdAndUpdate(media.id, newDimensions, { new: true })
             ];
         })
         .spread(media => {

@@ -639,7 +639,7 @@
         }
 
         function fetchBookingData(bookingId) {
-            if (! bookingId || isNaN(bookingId)) {
+            if (! bookingId || !tools.isObjectId(bookingId)) {
                 resetBookingData();
             }
 

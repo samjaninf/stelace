@@ -1,4 +1,10 @@
-/* global AppUrlService, IPService, TokenService, ToolsService, StelaceConfigService, StelaceEvent, StelaceSession, UAService, UrlService, Webhook */
+/* global AppUrlService, IPService, TokenService, ToolsService, StelaceConfigService, UAService, UrlService */
+
+const {
+    StelaceEvent,
+    StelaceSession,
+    Webhook,
+} = require('../models_new');
 
 module.exports = {
 
@@ -66,9 +72,9 @@ function isFromExternalUrl(url) {
 // session by cookie
 function getSessionId(req) {
     var sessionHash = req.signedCookies[sessionField];
-    var sessionId = parseInt(sessionHash, 10);
+    var sessionId = sessionHash;
 
-    return ! isNaN(sessionId) ? sessionId : null;
+    return µ.isMongoId(sessionId) ? sessionId : null;
 }
 
 // session by HTTP body
@@ -100,17 +106,17 @@ function isSessionExpired(currDate, prevDate) {
 }
 
 function isNewUser(currUserId, prevUserId) {
-    return currUserId && prevUserId && currUserId !== prevUserId;
+    return currUserId && prevUserId && !µ.isSameId(currUserId, prevUserId);
 }
 
 /**
  * is session reusable
  * @param  {object} currState
  * @param  {string} currState.date
- * @param  {number} currState.userId
+ * @param  {ObjectId} currState.userId
  * @param  {object} prevState
  * @param  {string} prevState.date
- * @param  {number} prevState.userId
+ * @param  {ObjectId} prevState.userId
  * @return {Boolean}
  */
 function isSessionReusable(currState, prevState) {
@@ -140,7 +146,7 @@ function getUserInfo(req) {
 
     if (originalUserId) {
         userId = originalUserId;
-        if (originalUserId !== realUserId) {
+        if (!µ.isSameId(originalUserId, realUserId)) {
             loginAsUserId = realUserId;
         }
     } else {
@@ -233,8 +239,8 @@ function extractListingId(url, parsedUrl) {
 
 function getListingIdByListingView(tokens) {
     var slugId = _.last(tokens.slug.split("-"));
-    slugId = parseInt(slugId, 10);
-    if (! slugId || isNaN(slugId)) {
+
+    if (!slugId || !µ.isMongoId(slugId)) {
         return null;
     } else {
         return slugId;
@@ -243,7 +249,7 @@ function getListingIdByListingView(tokens) {
 
 function getSimpleId(tokens) {
     var id = tokens.id;
-    if (! id || isNaN(id)) {
+    if (! id || !µ.isMongoId(id)) {
         return null;
     } else {
         return id;
@@ -361,15 +367,15 @@ function isFromGoogleCpc(refererUrl, srcUrl) {
  * @param  {string}   args.label
  * @param  {object}   [args.req]
  * @param  {object}   [args.res]
- * @param  {number}   [args.userId]
- * @param  {number}   [args.targetUserId]
- * @param  {number}   [args.loginAsUserId]
- * @param  {number}   [args.defaultUserId]
- * @param  {number}   [args.defaultLoginAsUserId]
- * @param  {number}   [args.listingId]
- * @param  {number[]} [args.tagsIds]
- * @param  {number}   [args.bookingId]
- * @param  {number}   [args.searchId]
+ * @param  {ObjectId}   [args.userId]
+ * @param  {ObjectId}   [args.targetUserId]
+ * @param  {ObjectId}   [args.loginAsUserId]
+ * @param  {ObjectId}   [args.defaultUserId]
+ * @param  {ObjectId}   [args.defaultLoginAsUserId]
+ * @param  {ObjectId}   [args.listingId]
+ * @param  {ObjectId[]} [args.tagsIds]
+ * @param  {ObjectId}   [args.bookingId]
+ * @param  {ObjectId}   [args.searchId]
  * @param  {string}   [args.type]
  * @param  {string}   [args.refererUrl]
  * @param  {string}   [args.srcUrl]
@@ -473,7 +479,7 @@ function createEvent(args) {
         targetUrl = convertToAbsUrl(targetUrl);
     }
 
-    if (loginAsUserId === userId) {
+    if (µ.isSameId(loginAsUserId, userId)) {
         loginAsUserId = null;
     }
 
@@ -632,7 +638,7 @@ function createEvent(args) {
         });
 
         return StelaceSession
-            .updateOne(stelaceSession.id, updateAttrs)
+            .findByIdAndUpdate(stelaceSession.id, updateAttrs, { new: true })
             .catch(err => {
                 // if no stelace session found, remove from caching
                 if (err.message && err.message === "Update one - not found") {
@@ -742,7 +748,7 @@ function getSessionInfo(sessionId, sessionParams) {
             return sessionInfo;
         } else {
             var results = yield Promise.props({
-                stelaceSession: StelaceSession.findOne({ id: sessionId }),
+                stelaceSession: StelaceSession.findById(sessionId),
                 stelaceEvent: StelaceEvent
                     .findOne({ sessionId: sessionId })
                     .sort({ createdDate: -1 })
@@ -851,7 +857,7 @@ function isAtLeastOneSet(model, fields) {
  * @param  {string} args.utmMedium
  * @param  {string} args.utmTerm
  * @param  {string} args.refererUrl
- * @param  {number} args.userId
+ * @param  {ObjectId} args.userId
  * @param  {string} args.ip
  * @param  {string} args.country
  * @param  {string} args.region

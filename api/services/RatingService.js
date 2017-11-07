@@ -1,4 +1,12 @@
-/* global Booking, GamificationService, Listing, Media, Rating, User */
+/* global GamificationService */
+
+const {
+    Booking,
+    Listing,
+    Media,
+    Rating,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -15,8 +23,8 @@ const moment = require('moment');
 
 /**
  * get classified ratings by "my", "other"
- * @param  {Number}  bookingId
- * @param  {Number}  userId - the current user
+ * @param  {ObjectId}  bookingId
+ * @param  {ObjectId}  userId - the current user
  * @return {object}  classified ratings
  */
 async function getClassifiedRatings({ bookingId, userId }) {
@@ -39,8 +47,8 @@ async function populateRatings(ratings, access = 'others', populateListings = fa
         users,
         listings,
     ] = await Promise.all([
-        User.find({ id: _.pluck(ratings, 'userId') }),
-        populateListings ? Listing.find({ id: _.pluck(ratings, 'listingId') }) : [],
+        User.find({ _id: _.pluck(ratings, 'userId') }),
+        populateListings ? Listing.find({ _id: _.pluck(ratings, 'listingId') }) : [],
     ]);
 
     const userMedias = await User.getMedia(users);
@@ -65,8 +73,8 @@ async function populateRatings(ratings, access = 'others', populateListings = fa
  * find ratings from booking or target
  * if target provided, get all ratings related to that user
  * if booking provided, get all ratings related to this booking
- * @param  {Number} bookingId - bookingId or targetId must be provided
- * @param  {Number} targetId
+ * @param  {ObjectId} bookingId - bookingId or targetId must be provided
+ * @param  {ObjectId} targetId
  * @param  {Boolean} [populateListings = false]
  * @param  {Object} [user] - must be defined if booking provided
  * @param  {String} [access]
@@ -108,7 +116,7 @@ async function findRatings({
  * @param  {number} attrs.score
  * @param  {string} attrs.comment
  * @param  {string} attrs.listingComment
- * @param  {number} attrs.bookingId
+ * @param  {ObjectId} attrs.bookingId
  * @param  {object} user
  * @param  {object} [logger] - useful for gamification
  * @param  {object} [req]    - useful for gamification
@@ -139,11 +147,11 @@ async function createRating({
         throw new BadRequestError();
     }
 
-    const booking = await Booking.findOne({ id: createAttrs.bookingId });
+    const booking = await Booking.findById(createAttrs.bookingId);
     if (!booking) {
         throw new NotFoundError();
     }
-    if (!_.includes(Rating.getRatersIds(booking), user.id)) {
+    if (!µ.includesObjectId(Rating.getRatersIds(booking), user.id)) {
         throw new ForbiddenError();
     }
 
@@ -177,7 +185,7 @@ async function createRating({
 
 /**
  * update rating
- * @param  {number} ratingId
+ * @param  {ObjectId} ratingId
  * @param  {object} attrs
  * @param  {number} attrs.score
  * @param  {string} attrs.comment
@@ -209,11 +217,11 @@ async function updateRating(ratingId, {
         throw new BadRequestError();
     }
 
-    let rating = await Rating.findOne({ id: ratingId });
+    let rating = await Rating.findById(ratingId);
     if (!rating) {
         throw new NotFoundError();
     }
-    if (rating.userId !== user.id) {
+    if (!µ.isSameId(rating.userId, user.id)) {
         throw new ForbiddenError();
     }
     if (rating.visibleDate < now) {
@@ -227,7 +235,7 @@ async function updateRating(ratingId, {
 
     const scoreDiff = updateAttrs.score - rating.score;
 
-    rating = await Rating.updateOne(rating.id, updateAttrs);
+    rating = await Rating.findByIdAndUpdate(rating.id, updateAttrs, { new: true });
     classifiedRatings.my = rating;
 
     try {

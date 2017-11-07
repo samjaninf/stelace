@@ -9,25 +9,9 @@
 
 module.exports = {
 
-    find,
-    findOne,
-    create,
     update,
-    destroy,
 
 };
-
-function find(req, res) {
-    res.forbidden();
-}
-
-function findOne(req, res) {
-    res.forbidden();
-}
-
-function create(req, res) {
-    res.forbidden();
-}
 
 async function update(req, res) {
     if (!TokenService.isRole(req, "admin")) {
@@ -50,8 +34,4 @@ async function update(req, res) {
     } catch (err) {
         res.sendError(err);
     }
-}
-
-function destroy(req, res) {
-    res.forbidden();
 }

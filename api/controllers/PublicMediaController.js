@@ -9,37 +9,11 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     mangopay: mangopay
 
 };
 
 var path = require('path');
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
 
 function mangopay(req, res) {
     var filename = "Mangopay_Contrat_Fr_v2.pdf";

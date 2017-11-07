@@ -1,4 +1,9 @@
-/* global mangopay, TimeService, Transaction, TransactionLog */
+/* global mangopay, TimeService */
+
+const {
+    Transaction,
+    TransactionLog,
+} = require('../models_new');
 
 /**
  * TransactionLogController
@@ -9,35 +14,9 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     webhook: webhook
 
 };
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
 
 function webhook(req, res) {
     var resourceId = req.param("RessourceId");
@@ -55,7 +34,7 @@ function webhook(req, res) {
 
     var createAttrs = {
         resourceId: resourceId,
-        eventDate: eventDate,
+        eventDate: eventDate.toISOString(),
         eventType: eventType
     };
 

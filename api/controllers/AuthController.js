@@ -1,4 +1,4 @@
-/* global GamificationService, passport, StelaceEventService, TokenService, UAService, User */
+/* global GamificationService, passport, StelaceEventService, TokenService, UAService */
 
 /**
  * Authentication Controller
@@ -10,6 +10,10 @@
 
 var jwt    = require('jsonwebtoken');
 var moment = require('moment');
+
+const {
+    User,
+} = require('../models_new');
 
 Promise.promisifyAll(jwt);
 
@@ -128,7 +132,8 @@ function callback(req, res) {
                 });
 
                 User
-                    .updateOne(user.id, { lastConnectionDate: moment().toISOString() })
+                    .findByIdAndUpdate(user.id, { lastConnectionDate: new Date() })
+                    .exec()
                     .catch(() => { /* do nothing */ });
 
                 // Upon successful login, send the user to the homepage were req.user
@@ -165,7 +170,7 @@ function refreshToken(req, res) {
             return [
                 decodedToken,
                 User.findOne({
-                    id: decodedToken.userId,
+                    _id: decodedToken.userId,
                     destroyed: false
                 })
             ];
@@ -222,7 +227,7 @@ function loginAs(req, res) {
     }
 
     return Promise.coroutine(function* () {
-        var user = yield User.findOne({ id: userId });
+        var user = yield User.findById(userId);
         if (! user) {
             throw new NotFoundError();
         }

@@ -1,4 +1,9 @@
-/* global EmailService, Sms, StelaceConfigService, User */
+/* global EmailService, StelaceConfigService */
+
+const {
+    Sms,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -29,7 +34,7 @@ function sendPhoneCheckSms(args) {
 /**
  * Given user id and text, send him the sms
  * @param  {Object} args
- * @param  {Number} args.toUserId
+ * @param  {ObjectId} args.toUserId
  * @param  {String} args.text
  */
 async function sendTextSms(args) {
@@ -41,7 +46,7 @@ async function sendTextSms(args) {
     const active = await StelaceConfigService.isFeatureActive('SMS');
     if (!active) return;
 
-    const toUser = await User.findOne({ id: toUserId });
+    const toUser = await User.findById(toUserId);
     if (!toUser || !toUser.phoneCheck || !toUser.phone) {
         throw new Error(`no valid phone for user ${toUserId}`);
     }

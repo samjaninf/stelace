@@ -1,4 +1,9 @@
-/* global GamificationService, SmsService, Sms, StelaceConfigService, User */
+/* global GamificationService, SmsService, StelaceConfigService */
+
+const {
+    Sms,
+    User,
+} = require('../models_new');
 
 /**
  * SmsController
@@ -9,37 +14,10 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     sendVerify: sendVerify,
     checkVerify: checkVerify
 
 };
-
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
 
 function sendVerify(req, res) {
     var filteredAttrs = [
@@ -77,7 +55,7 @@ function sendVerify(req, res) {
 
             // update the user phone only if the phone isn't checked
             return User
-                .updateOne(req.user.id, { phone: createAttrs.to })
+                .findByIdAndUpdate(req.user.id, { phone: createAttrs.to }, { new: true })
                 .then(u => {
                     req.user.phone = u.phone;
                 });
@@ -94,10 +72,10 @@ function sendVerify(req, res) {
         .then(sms => {
             if (sms) {
                 return User
-                    .updateOne(req.user.id, {
+                    .findByIdAndUpdate(req.user.id, {
                         phone: createAttrs.to,
                         phoneCheck: true
-                    })
+                    }, { new: true })
                     .then(() => {
                         res.json({
                             verifyId: sms.verifyId,
@@ -198,7 +176,7 @@ function checkVerify(req, res) {
             };
 
             return [
-                Sms.updateOne(sms.id, updateAttrs),
+                Sms.findByIdAndUpdate(sms.id, updateAttrs, { new: true }),
                 checkVerifyResponse
             ];
         })
@@ -208,10 +186,10 @@ function checkVerify(req, res) {
             }
 
             return User
-                .updateOne(req.user.id, {
+                .findByIdAndUpdate(req.user.id, {
                     phoneCheck: true,
                     phone: sms.to
-                })
+                }, { new: true })
                 .then(user => {
                     return [
                         checkVerifyResponse,

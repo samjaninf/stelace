@@ -1,4 +1,7 @@
-/* global ApiKey, Webhook */
+const {
+    ApiKey,
+    Webhook,
+} = require('../../models_new');
 
 module.exports = {
 
@@ -33,8 +36,8 @@ async function destroy(req, res) {
         const apiKey = await ApiKey.findOne({ key });
 
         if (apiKey) {
-            await Webhook.destroy({ apiKeyId: apiKey.id });
-            await ApiKey.destroy({ key });
+            await Webhook.remove({ apiKeyId: apiKey.id });
+            await ApiKey.remove({ key });
         }
 
         res.ok();

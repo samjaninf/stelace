@@ -1,4 +1,8 @@
-/* global ImageService, Media */
+/* global ImageService */
+
+const {
+    Media,
+} = require('../models_new');
 
 module.exports = {
 
@@ -27,7 +31,7 @@ const maxSizeUploadInBytes = 50000000; // 50MB
  * @param  {object} req
  * @param  {object} res
  * @param  {string} [field]
- * @param  {number} [targetId]
+ * @param  {ObjectId} [targetId]
  * @param  {string} [name]
  * @param  {object} [logger]
  * @param  {string[]} authorizedTypes
@@ -112,8 +116,8 @@ async function uploadFromInputFile({
  * @param  {string} [authorizedTypes]
  * @param  {number} [maxSize] - in bytes
  * @param  {string} [field]
- * @param  {number} [targetId]
- * @param  {number} userId
+ * @param  {ObjectId} [targetId]
+ * @param  {ObjectId} userId
  * @param  {object} [logger]
  * @return {object} created media
  */
@@ -184,7 +188,7 @@ async function createMediaFromFile({
     } catch (err) {
         // destroy the file and the media if failed
         await fs.unlinkAsync(filepath).catch(() => null);
-        await Media.destroy({ id: media.id }).catch(() => null);
+        await Media.remove({ _id: media.id }).catch(() => null);
         throw err;
     }
 
@@ -238,18 +242,18 @@ async function setImagePlaceholders(media) {
     ]);
 
     const placeholderTooLarge = !!(placeholder && placeholder.length > 300);
-    return await Media.updateOne({ id: media.id }, {
+    return await Media.findByIdAndUpdate(media.id, {
         color,
         placeholder: placeholderTooLarge ? null : placeholder,
-    });
+    }, { new: true });
 }
 
 
 /**
  * Download file
  * @param  {object} res
- * @param  {number} userId
- * @param  {number} id              - (id, uuid) or media must be defined
+ * @param  {ObjectId} userId
+ * @param  {ObjectId} id              - (id, uuid) or media must be defined
  * @param  {string} uuid
  * @param  {object} media
  * @param  {string} [exposeFilename]  - name of the file that is displayed when downloading the file
@@ -271,13 +275,13 @@ async function downloadFile({
         }
 
         if (!media) {
-            media = await Media.findOne({ id, uuid });
+            media = await Media.findOne({ _id: id, uuid });
             if (!media) {
                 throw new NotFoundError();
             }
         }
 
-        if (userId !== media.userId) {
+        if (!µ.isSameId(userId, media.userId)) {
             throw new ForbiddenError();
         }
 

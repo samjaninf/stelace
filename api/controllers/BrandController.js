@@ -1,4 +1,9 @@
-/* global Brand, ListingCategory, TokenService */
+/* global TokenService */
+
+const {
+    Brand,
+    ListingCategory,
+} = require('../models_new');
 
 /**
  * BrandController
@@ -13,7 +18,6 @@ module.exports = {
     findOne: findOne,
     create: create,
     update: update,
-    destroy: destroy
 
 };
 
@@ -48,12 +52,12 @@ function find(req, res) {
                     ];
                 })
                 .spread((listingParentCategories, brands) => {
-                    var listingParentCategoryIds = _.pluck(listingParentCategories, "id");
+                    var listingParentCategoryIds = _.pluck(listingParentCategories, "id").map(µ.getObjectIdString);
 
                     var matchBrands = _(brands)
                         .filter(brand => {
                             return ! brand.listingCategories
-                                || ! _.intersection(brand.listingCategories, listingParentCategoryIds).length;
+                                || ! _.intersection(brand.listingCategories.map(µ.getObjectIdString), listingParentCategoryIds).length;
                         })
                         .sortBy(brand => brand.name)
                         .value();
@@ -71,7 +75,7 @@ function findOne(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return Brand.findOne({ id: id });
+            return Brand.findById(id);
         })
         .then(brand => {
             if (! brand) {
@@ -96,7 +100,7 @@ function create(req, res) {
         .resolve()
         .then(() => {
             return [
-                listingCategoryId ? ListingCategory.findOne({ id: listingCategoryId }) : null,
+                listingCategoryId ? ListingCategory.findById(listingCategoryId) : null,
                 Brand.findOne({ name: name })
             ];
         })
@@ -132,29 +136,25 @@ function update(req, res) {
     if (! TokenService.isRole(req, "admin")) {
         return res.forbidden();
     }
-    if (! µ.checkArray(updateAttrs.listingCategories, "id")) {
+    if (! µ.checkArray(updateAttrs.listingCategories, "mongoId")) {
         return res.badRequest();
     }
 
     return Promise
         .resolve()
         .then(() => {
-            return ListingCategory.find({ id: updateAttrs.listingCategories });
+            return ListingCategory.find({ _id: updateAttrs.listingCategories });
         })
         .then(listingCategories => {
             if (listingCategories.length !== updateAttrs.listingCategories.length) {
                 throw new BadRequestError("listing categories don't all exist");
             }
 
-            return Brand.updateOne(id, updateAttrs);
+            return Brand.findByIdAndUpdate(id, updateAttrs, { new: true });
         })
         .then(brand => {
             res.json(Brand.expose(brand, access));
         })
         .catch(res.sendError);
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }
 

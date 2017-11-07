@@ -1,4 +1,8 @@
-/* global Rating, RatingService */
+/* global RatingService */
+
+const {
+    Rating,
+} = require('../models_new');
 
 /**
  * RatingController
@@ -10,10 +14,8 @@
 module.exports = {
 
     find: find,
-    findOne: findOne,
     create: create,
     update: update,
-    destroy: destroy,
 
 };
 
@@ -25,13 +27,6 @@ async function find(req, res) {
         targetId,
         populateListings,
     } = req.allParams();
-
-    if (bookingId) {
-        bookingId = parseInt(bookingId, 10);
-    }
-    if (targetId) {
-        targetId = parseInt(targetId, 10);
-    }
 
     try {
         const ratings = await RatingService.findRatings({
@@ -48,19 +43,12 @@ async function find(req, res) {
     }
 }
 
-function findOne(req, res) {
-    return res.forbidden();
-}
-
 async function create(req, res) {
     const access = 'self';
     const attrs = req.allParams();
 
     if (typeof attrs.score !== 'undefined') {
         attrs.score = parseInt(attrs.score, 10);
-    }
-    if (typeof attrs.bookingId !== 'undefined') {
-        attrs.bookingId = parseInt(attrs.bookingId, 10);
     }
 
     const now = moment().toISOString();
@@ -104,8 +92,4 @@ async function update(req, res) {
     } catch (err) {
         res.sendError(err);
     }
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }

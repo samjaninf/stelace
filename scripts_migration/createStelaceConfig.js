@@ -1,9 +1,13 @@
-/* global BootstrapService, StelaceConfig */
+/* global BootstrapService */
 
 const Sails = require('sails');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    StelaceConfig,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -42,7 +46,7 @@ Sails.load({
         };
 
         if (stelaceConfigs.length) {
-            await StelaceConfig.updateOne(stelaceConfigs[0].id, attrs);
+            await StelaceConfig.findByIdAndUpdate(stelaceConfigs[0].id, attrs, { new: true });
         } else {
             await StelaceConfig.create(attrs);
         }

@@ -1,7 +1,18 @@
 /* global
-    BookingService, Bookmark, Listing, ListingService, ListingTypeService, Location, Media, ModelSnapshot,
-    PriceRecommendationService, PricingService, SearchEvent, SearchService, StelaceEventService, Tag, TokenService, ToolsService, User
+    BookingService, ListingService, ListingTypeService,
+    PriceRecommendationService, PricingService, SearchService, StelaceEventService, TokenService, ToolsService
 */
+
+const {
+    Bookmark,
+    Listing,
+    Location,
+    Media,
+    ModelSnapshot,
+    SearchEvent,
+    Tag,
+    User,
+} = require('../models_new');
 
 /**
  * ListingController
@@ -30,8 +41,8 @@ module.exports = {
 
 };
 
-var moment    = require('moment');
-var NodeCache = require('node-cache');
+const moment    = require('moment');
+const NodeCache = require('node-cache');
 
 var landingCache = new NodeCache({ stdTTL: 5 * 60 }); // 5 min
 
@@ -56,7 +67,7 @@ function find(req, res) {
                     validated: true,
                     locked: false,
                     updatedDate: {
-                        ">=": landingPastLimit
+                        $gte: landingPastLimit
                     }
                 });
             } else if (ownerId) {
@@ -83,8 +94,8 @@ function find(req, res) {
 
             return [
                 listings,
-                User.find({ id: _.pluck(listings, "ownerId") }),
-                Location.find({ id: locationsIds })
+                User.find({ _id: _.pluck(listings, "ownerId") }),
+                Location.find({ _id: locationsIds })
             ];
         })
         .spread((listings, owners, locations) => {
@@ -105,7 +116,7 @@ function find(req, res) {
                 listing.owner      = User.expose(indexedOwners[listing.ownerId], access);
                 listing.ownerMedia = Media.expose(ownerMedias[listing.ownerId], access);
                 listing.locations  = _.filter(locations, function (location) {
-                    return _.contains(listing.locations, location.id);
+                    return µ.includesObjectId(listing.locations, location.id);
                 });
                 listing.locations  = Location.exposeAll(listing.locations, access);
 
@@ -118,7 +129,7 @@ function find(req, res) {
 }
 
 async function findOne(req, res) {
-    const id = parseInt(req.param('id'), 10);
+    const id = req.param('id');
     const snapshotAllowed = (req.param('snapshot') === 'true');
     let access;
 
@@ -131,7 +142,7 @@ async function findOne(req, res) {
         if (snapshotAllowed) {
             listing = await Listing.getListingsOrSnapshots(id);
         } else {
-            listing = await Listing.findOne({ id });
+            listing = await Listing.findById(id);
         }
 
         if (!listing) {
@@ -142,7 +153,7 @@ async function findOne(req, res) {
             owner,
             futureBookings,
         ] = await Promise.all([
-            User.findOne({ id: listing.ownerId }),
+            User.findById(listing.ownerId),
             ! listing.snapshot ? Listing.getFutureBookings(listing.id, today) : [],
         ]);
 
@@ -160,7 +171,7 @@ async function findOne(req, res) {
             Listing.getInstructionsMedias([listing]).then(listingInstructionsMedias => listingInstructionsMedias[listing.id])
         ]);
 
-        if (req.user && listing.ownerId === req.user.id) {
+        if (req.user && µ.isSameId(listing.ownerId, req.user.id)) {
             access = 'self';
         } else {
             access = 'others';
@@ -214,13 +225,13 @@ async function create(req, res) {
     var access = "self";
 
     if (! createAttrs.name
-        || (createAttrs.tags && ! µ.checkArray(createAttrs.tags, "id"))
-        || (createAttrs.locations && ! µ.checkArray(createAttrs.locations, "id"))
+        || (createAttrs.tags && ! µ.checkArray(createAttrs.tags, "mongoId"))
+        || (createAttrs.locations && ! µ.checkArray(createAttrs.locations, "mongoId"))
         || typeof createAttrs.sellingPrice !== "number" || createAttrs.sellingPrice < 0
         || typeof createAttrs.dayOnePrice !== "number" || createAttrs.dayOnePrice < 0
         || ! PricingService.getPricing(createAttrs.pricingId)
         || typeof createAttrs.deposit !== "number" || createAttrs.deposit < 0
-        || (!createAttrs.listingTypesIds || !µ.checkArray(createAttrs.listingTypesIds, 'id') || !createAttrs.listingTypesIds.length)
+        || (!createAttrs.listingTypesIds || !µ.checkArray(createAttrs.listingTypesIds, 'mongoId') || !createAttrs.listingTypesIds.length)
         || (createAttrs.customPricingConfig && ! PricingService.isValidCustomConfig(createAttrs.customPricingConfig))
     ) {
         return res.badRequest();
@@ -290,7 +301,7 @@ async function create(req, res) {
     async function isValidTags(tagsIds) {
         if (!tagsIds) return true;
 
-        const tags = await Tag.find({ id: _.uniq(tagsIds) });
+        const tags = await Tag.find({ _id: _.uniq(tagsIds) });
         return tags.length === tagsIds.length;
     }
 
@@ -327,8 +338,8 @@ async function update(req, res) {
     var updateAttrs = _.pick(req.allParams(), filteredAttrs);
     var access = "self";
 
-    if ((updateAttrs.tags && ! µ.checkArray(updateAttrs.tags, "id"))
-        || (updateAttrs.locations && ! µ.checkArray(updateAttrs.locations, "id"))
+    if ((updateAttrs.tags && ! µ.checkArray(updateAttrs.tags, "mongoId"))
+        || (updateAttrs.locations && ! µ.checkArray(updateAttrs.locations, "mongoId"))
         || (updateAttrs.sellingPrice && (typeof updateAttrs.sellingPrice !== "number" || updateAttrs.sellingPrice < 0))
         || (updateAttrs.dayOnePrice && (typeof updateAttrs.dayOnePrice !== "number" || updateAttrs.dayOnePrice < 0))
         || (updateAttrs.deposit && (typeof updateAttrs.deposit !== "number" || updateAttrs.deposit < 0))
@@ -356,7 +367,7 @@ async function update(req, res) {
             validLocations,
             validTags,
         ] = await Promise.all([
-            Listing.findOne({ id: id }),
+            Listing.findById(id),
             Listing.isValidReferences({
                 brandId: updateAttrs.brandId,
                 listingCategoryId: updateAttrs.listingCategoryId
@@ -368,7 +379,7 @@ async function update(req, res) {
         if (! listing) {
             throw new NotFoundError();
         }
-        if (listing.ownerId !== req.user.id) {
+        if (!µ.isSameId(listing.ownerId, req.user.id)) {
             throw new ForbiddenError();
         }
         if (! validReferences
@@ -383,7 +394,7 @@ async function update(req, res) {
             updateAttrs.nameURLSafe = ToolsService.getURLStringSafe(updateAttrs.name);
         }
 
-        let exposedListing = await Listing.updateOne(listing.id, updateAttrs);
+        let exposedListing = await Listing.findByIdAndUpdate(listing.id, updateAttrs, { new: true });
         exposedListing = await Listing.updateTags(exposedListing, updateAttrs.tags);
 
         res.json(Listing.expose(exposedListing, access));
@@ -397,7 +408,7 @@ async function update(req, res) {
         if (!locationsIds) return true;
 
         const locations = await Location.find({
-            id: _.uniq(locationsIds),
+            _id: _.uniq(locationsIds),
             userId: req.user.id,
         });
         return locations.length === locationsIds.length;
@@ -406,57 +417,43 @@ async function update(req, res) {
     async function isValidTags(tagsIds) {
         if (!tagsIds) return true;
 
-        const tags = await Tag.find({ id: _.uniq(tagsIds) });
+        const tags = await Tag.find({ _id: _.uniq(tagsIds) });
         return tags.length === tagsIds.length;
     }
 }
 
-function destroy(req, res) {
+async function destroy(req, res) {
     var id = req.param("id");
     var today = moment().format("YYYY-MM-DD");
 
-    return Promise
-        .resolve()
-        .then(() => {
-            return Listing.findOne({
-                id: id,
-                ownerId: req.user.id
-            });
-        })
-        .then(listing => {
-            if (! listing) {
-                throw new NotFoundError();
-            }
+    try {
+        const listing = await Listing.findOne({
+            _id: id,
+            ownerId: req.user.id,
+        });
+        if (!listing) {
+            throw new NotFoundError();
+        }
 
-            return [
-                listing,
-                Listing.getFutureBookings(listing.id, today)
-            ];
-        })
-        .spread((listing, futureBookings) => {
-            if (futureBookings.length) {
-                var error = new BadRequestError("remaining bookings");
-                error.expose = true;
-                throw error;
-            }
+        const futureBookings = await Listing.getFutureBookings(listing.id, today);
+        if (futureBookings.length) {
+            const error = new BadRequestError("remaining bookings");
+            error.expose = true;
+            throw error;
+        }
 
-            return [
-                listing,
-                Bookmark.update({ listingId: id }, { active: false }) // disable bookmarks associated to this listing
-            ];
-        })
-        .spread(listing => {
-            // create a snapshot before destroying the listing
-            return ModelSnapshot.getSnapshot("listing", listing);
-        })
-        .then(() => sendEvent(req, res, id))
-        .then(() => {
-            return Listing.destroy({ id: id });
-        })
-        .then(() => {
-            res.json({ id: id });
-        })
-        .catch(res.sendError);
+        await Bookmark.update({ listingId: id }, { active: false }); // disable bookmarks associated to this listing
+
+        // create a snapshot before destroying the listing
+        await ModelSnapshot.getSnapshot("listing", listing);
+
+        await sendEvent(req, res, id);
+        await listing.remove();
+
+        res.json({ id });
+    } catch (err) {
+        res.sendError(err);
+    }
 
 
 
@@ -465,7 +462,7 @@ function destroy(req, res) {
             req: req,
             res: res,
             label: "listing.deleted",
-            data: { listingId: listingId },
+            data: { listingId },
             type: 'core',
         });
     }
@@ -491,13 +488,13 @@ function query(req, res) {
         var listing;
 
         if (listingId) {
-            listing = yield Listing.findOne({ id: listingId });
+            listing = yield Listing.findById(listingId);
             if (listing) {
                 listings.push(listing);
             }
         } else {
             if (isEnoughLongToken(query)) {
-                listings = yield Listing.find({ name: { contains: query } });
+                listings = yield Listing.find({ name: { $regex: query, $options: 'i' } });
             } else {
                 listings = [];
             }
@@ -510,8 +507,7 @@ function query(req, res) {
 
 
     function getListingId(str) {
-        var parsedStr = parseInt(str, 10);
-        return ! isNaN(parsedStr) ? parsedStr : null;
+        return µ.isMongoId(str) ? str : null;
     }
 
     function isEnoughLongToken(token) {
@@ -557,7 +553,7 @@ function updateMedias(req, res) {
     var mediasIds = req.param("mediasIds");
     var mediaType = req.param("mediaType");
 
-    if (! mediasIds || ! µ.checkArray(mediasIds, "id")) {
+    if (! mediasIds || ! µ.checkArray(mediasIds, "mongoId")) {
         return res.badRequest();
     }
     if (! _.contains(["listing", "instructions"], mediaType)) {
@@ -569,21 +565,17 @@ function updateMedias(req, res) {
         return res.badRequest(new BadRequestError("cannot set too much medias"));
     }
 
-    mediasIds = _.map(mediasIds, function (mediaId) {
-        return parseInt(mediaId, 10);
-    });
-
     return Promise
         .resolve()
         .then(() => {
             return [
-                Listing.findOne({ id: id }),
-                Media.find({ id: mediasIds })
+                Listing.findById(id),
+                Media.find({ _id: mediasIds })
             ];
         })
         .spread((listing, medias) => {
             var isAllOwnMedias = _.reduce(medias, function (memo, media) {
-                if (req.user.id !== media.userId) {
+                if (!µ.isSameId(req.user.id, media.userId)) {
                     memo = memo && false;
                 }
                 return memo;
@@ -594,7 +586,7 @@ function updateMedias(req, res) {
             ) {
                 throw new NotFoundError();
             }
-            if (req.user.id !== listing.ownerId
+            if (!µ.isSameId(req.user.id, listing.ownerId)
                 || ! isAllOwnMedias
             ) {
                 throw new ForbiddenError();
@@ -608,10 +600,10 @@ function updateMedias(req, res) {
                 updateAttrs.instructionsMediasIds = mediasIds;
             }
 
-            return Listing.updateOne(listing.id, updateAttrs);
+            return Listing.findByIdAndUpdate(listing.id, updateAttrs, { new: true });
         })
         .then(() => {
-            res.ok({ id: id });
+            res.ok({ id });
         })
         .catch(res.sendError);
 }
@@ -658,9 +650,10 @@ async function search(req, res) {
         if (logConfig && logConfig.searchEvent) {
             // asynchronous operation
             SearchEvent
-                .updateOne(logConfig.searchEvent.id, {
+                .findByIdAndUpdate(logConfig.searchEvent.id, {
                     completionDuration: new Date() - searchStartDate
-                })
+                }, { new: true })
+                .exec()
                 .catch(() => null);
         }
 
@@ -680,21 +673,21 @@ function getLocations(req, res) {
 
     var access = "others";
 
-    if (isNaN(id) || id <= 0) {
+    if (!µ.isMongoId(id)) {
         return res.badRequest();
     }
 
     return Promise
         .resolve()
         .then(() => {
-            return Listing.findOne({ id: id });
+            return Listing.findById(id);
         })
         .then(listing => {
             if (! listing) {
                 throw new NotFoundError();
             }
 
-            return Location.find({ id: listing.locations });
+            return Location.find({ _id: listing.locations });
         })
         .then(locations => {
             res.json(Location.exposeAll(locations, access));

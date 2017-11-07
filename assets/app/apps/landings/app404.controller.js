@@ -4,7 +4,7 @@
         .module("app.landings")
         .controller("App404Controller", App404Controller);
 
-    function App404Controller($location, $q, $state, ListingService, platform, toastr, UserService) {
+    function App404Controller($location, $q, $state, ListingService, platform, toastr, tools, UserService) {
 
         var url404       = $location.url();
         var listingStateUrl = _.get($state.get("listing"), "urlWithoutParams", "listing");
@@ -20,7 +20,7 @@
             if (_.contains(url404, listingStateUrl)) {
                 listingId = _.last(url404.split(/[-/]+/)); // split / or - or /-
 
-                if (listingId && ! isNaN(listingId)) {
+                if (listingId && tools.isObjectId(listingId)) {
                     $q.all({
                         listing: ListingService.get(listingId),
                         currentUser: UserService.getCurrentUser()

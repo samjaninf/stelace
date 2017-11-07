@@ -1,4 +1,7 @@
-/* global ApiKey, ApiKeyEvent */
+const {
+    ApiKey,
+    ApiKeyEvent,
+} = require('../models_new');
 
 module.exports = async function (req, res, next) {
 

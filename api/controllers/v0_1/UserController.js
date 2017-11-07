@@ -1,4 +1,9 @@
-/* global ApiService, Media, User, UserService */
+/* global ApiService, UserService */
+
+const {
+    Media,
+    User,
+} = require('../../models_new');
 
 module.exports = {
 
@@ -23,7 +28,7 @@ async function find(req, res) {
             users,
             countUsers,
         ] = await Promise.all([
-            User.find(findAttrs).paginate(pagination),
+            User.find(findAttrs).skip(pagination.skip).limit(pagination.limit),
             User.count(findAttrs),
         ]);
 

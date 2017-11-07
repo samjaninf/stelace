@@ -1,4 +1,12 @@
-/* global Assessment, Booking, Location, MathService, ModelSnapshot, PhantomService, TimeService, Transaction, User */
+/* global MathService, ModelSnapshot, PhantomService, TimeService */
+
+const {
+    Assessment,
+    Booking,
+    Location,
+    Transaction,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -57,8 +65,8 @@ function getReportData(user, year) {
         var bookings = yield Booking.find({
             ownerId: user.id,
             cancellationId: null,
-            paidDate: { '!': null },
-            acceptedDate: { '!': null }
+            paidDate: { $ne: null },
+            acceptedDate: { $ne: null }
         });
 
         // if there is no bookings for this user, stop the fetching process
@@ -74,10 +82,10 @@ function getReportData(user, year) {
         var maxDate = `${reportYear + 1}${firstDateSuffix}`;
 
         var period = {
-            '<': maxDate
+            $lt: maxDate
         };
         if (year) {
-            period[">="] = minDate;
+            period.$gte = minDate;
         }
 
         var results = yield Promise.props({
@@ -310,7 +318,7 @@ function getReportFilepath(user, year) {
             var snapshot = yield ModelSnapshot.findOne({
                 targetId: model.id,
                 targetType: targetType,
-                createdDate: { '>=': editedDate }
+                createdDate: { $gte: editedDate }
             });
 
             if (! snapshot) {

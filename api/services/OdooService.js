@@ -1,4 +1,8 @@
-/* global odoo, OdooApiService, User */
+/* global odoo, OdooApiService */
+
+const {
+    User,
+} = require('../models_new');
 
 module.exports = {
 

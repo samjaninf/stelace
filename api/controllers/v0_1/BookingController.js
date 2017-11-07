@@ -1,4 +1,8 @@
-/* global ApiService, Booking */
+/* global ApiService */
+
+const {
+    Booking,
+} = require('../../models_new');
 
 module.exports = {
 
@@ -18,7 +22,7 @@ async function find(req, res) {
             bookings,
             countBookings,
         ] = await Promise.all([
-            Booking.find().paginate(pagination),
+            Booking.find().skip(pagination.skip).limit(pagination.limit),
             Booking.count(),
         ]);
 
@@ -39,7 +43,7 @@ async function findOne(req, res) {
     const access = 'self';
 
     try {
-        const booking = await Booking.findOne({ id });
+        const booking = await Booking.findById(id);
         if (!booking) {
             throw new NotFoundError();
         }

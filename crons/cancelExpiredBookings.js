@@ -1,4 +1,4 @@
-/* global Booking, BootstrapService, CancellationService, LoggerService */
+/* global BootstrapService, CancellationService, LoggerService */
 
 var Sails  = require('sails');
 var moment = require('moment');
@@ -7,6 +7,10 @@ var cronTaskName = "cancelExpiredBookings";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Booking,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -42,7 +46,7 @@ Sails.load({
     return Promise.coroutine(function* () {
         var bookings = yield Booking.find({
             cancellationId: null,
-            or: [
+            $or: [
                 { acceptedDate: null },
                 { paidDate: null }
             ]
@@ -53,9 +57,9 @@ Sails.load({
 
         bookings = _.filter(bookings, booking => {
             if (Booking.isNoTime(booking)) {
-                return booking.createdDate < purchaseCreatedDateLimit;
+                return booking.createdDate.toISOString() < purchaseCreatedDateLimit;
             } else {
-                return booking.startDate < rentingStartDateLimit;
+                return booking.startDate.toISOString() < rentingStartDateLimit;
             }
         }, []);
 

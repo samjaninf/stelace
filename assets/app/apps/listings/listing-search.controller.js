@@ -352,8 +352,8 @@
             if ($stateParams.qm && _.includes(["default", "relevance", "distance"], $stateParams.qm)) {
                 urlParams.queryMode = $stateParams.qm;
             }
-            if ($stateParams.t && !isNaN($stateParams.t)) {
-                urlParams.listingTypeId = parseInt($stateParams.t, 10);
+            if ($stateParams.t && tools.isObjectId($stateParams.t)) {
+                urlParams.listingTypeId = $stateParams.t;
             }
 
             // urlParams.onlyFree = $stateParams.free === "true";

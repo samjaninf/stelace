@@ -1,4 +1,8 @@
-/* global EmailTemplateService, Passport, StelaceEventService, User */
+/* global EmailTemplateService, StelaceEventService */
+const {
+    Passport,
+    User,
+} = require('../../models_new');
 
 /**
  * Local Authentication Protocol
@@ -85,7 +89,7 @@ exports.register = function (req, res, next) {
             .create({
                 protocol: "local",
                 password: password,
-                user: user.id
+                userId: user.id
             })
             .then(() => {
                 EmailTemplateService.sendEmailTemplate('app-subscription-to-confirm', {
@@ -101,7 +105,7 @@ exports.register = function (req, res, next) {
                     throw new Error("passport invalid");
                 }
 
-                return user.destroy()
+                return user.remove()
                     .then(function () {
                         throw err;
                     })
@@ -133,7 +137,7 @@ exports.connect = function (req, res, next) {
         .then(function () {
             return Passport.findOne({
                 protocol: "local",
-                user: user.id
+                userId: user.id
             });
         })
         .then(function (passport) {
@@ -142,7 +146,7 @@ exports.connect = function (req, res, next) {
                     .create({
                         protocol: "local",
                         password: password,
-                        user: user.id
+                        userId: user.id
                     })
                     .then(function (/* passport */) {
                         return user;
@@ -187,7 +191,7 @@ exports.login = function (req, identifier, password, next) {
                 user,
                 Passport.findOne({
                     protocol: "local",
-                    user: user.id
+                    userId: user.id
                 })
             ];
         })

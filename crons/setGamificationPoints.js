@@ -1,4 +1,4 @@
-/* global BootstrapService, GamificationService, Listing, LoggerService, User */
+/* global BootstrapService, GamificationService, LoggerService */
 
 var Sails = require('sails');
 
@@ -6,6 +6,11 @@ var cronTaskName = "setGamificationPoints";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Listing,
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {

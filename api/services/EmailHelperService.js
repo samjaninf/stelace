@@ -1,7 +1,13 @@
 /* global
-    AppUrlService, Assessment, Booking, EmailUtmService, PricingService, ToolsService,
-    UrlService, User
+    AppUrlService, EmailUtmService, PricingService, ToolsService,
+    UrlService
 */
+
+const {
+    Assessment,
+    Booking,
+    User,
+} = require('../models_new');
 
 module.exports = {
 

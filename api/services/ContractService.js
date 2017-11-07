@@ -1,4 +1,12 @@
-/* global Assessment, Listing, Location, ModelSnapshot, PhantomService, PricingService, ToolsService, User */
+/* global PhantomService, PricingService, ToolsService */
+
+const {
+    Assessment,
+    Listing,
+    Location,
+    ModelSnapshot,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -86,7 +94,7 @@ function _getData(booking) {
         .resolve()
         .then(() => {
             return Assessment.find({
-                or: [
+                $or: [
                     { startBookingId: booking.id },
                     { endBookingId: booking.id }
                 ]
@@ -129,9 +137,9 @@ function _getData(booking) {
             return [
                 initialAssessment,
                 finalAssessment,
-                ! initialAssessmentSigned ? Listing.findOne({ id: booking.listingId }) : null,
-                ! initialAssessmentSigned ? User.findOne({ id: booking.ownerId }) : null,
-                ! initialAssessmentSigned ? User.findOne({ id: booking.takerId }) : null,
+                ! initialAssessmentSigned ? Listing.findById(booking.listingId) : null,
+                ! initialAssessmentSigned ? User.findById(booking.ownerId) : null,
+                ! initialAssessmentSigned ? User.findById(booking.takerId) : null,
                 ! initialAssessmentSigned ? getMainLocation(booking.ownerId) : null,
                 ! initialAssessmentSigned ? getMainLocation(booking.takerId) : null,
                 initialAssessment ? getSnapshots(snapshotsIds) : []
@@ -197,8 +205,8 @@ function _getData(booking) {
 function _transformData(data, userId) {
     var formatDate     = "DD/MM/YYYY";
     var signFormatDate = "LLL";
-    var isOwner        = userId === data.booking.ownerId;
-    var isTaker        = userId === data.booking.takerId;
+    var isOwner        = µ.isSameId(userId, data.booking.ownerId);
+    var isTaker        = µ.isSameId(userId, data.booking.takerId);
     var obfuscate      = ! (data.booking.paidDate && data.booking.acceptedDate);
 
     // booking date variables are modified so take a snapshot here

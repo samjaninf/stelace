@@ -152,7 +152,7 @@
             if ($stateParams.slug) {
                 var slugId = _.last($stateParams.slug.split("-"));
 
-                if (slugId && ! isNaN(slugId)) {
+                if (slugId && tools.isObjectId(slugId)) {
                     listingId = slugId;
                 } else {
                     $state.go("404", null, { location: false });
@@ -961,7 +961,7 @@
                 return;
             }
 
-            var imgs = $document[0].getElementById("pics-grid").querySelectorAll(".stl-listing__image");
+            var imgs = $document[0].getElementById("pics-grid").querySelectorAll(".stelace-listing__image");
             _.forEach(imgs, function (img) {
                 var index = parseInt(img.getAttribute("data-index"), 10);
                 if (! isNaN(index)) {

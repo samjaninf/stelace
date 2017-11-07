@@ -1,9 +1,15 @@
-/* global Bookmark, EmailContent, EmailLog, EmailTracking, User */
-
 // Useful links for Sparkpost events
 // https://www.sparkpost.com/docs/user-guide/comparing-data
 // https://www.sparkpost.com/docs/tech-resources/webhook-event-reference
 // https://www.sparkpost.com/docs/tech-resources/sparkpost-event-metrics-definitions
+
+const {
+    Bookmark,
+    EmailContent,
+    EmailLog,
+    EmailTracking,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -252,7 +258,7 @@ function getUsersIdsFromMandrillMessagesIds(mandrillMessagesIds) {
     return Promise.coroutine(function* () {
         var emailLogs = yield EmailLog.find({
             mandrillMessageId: mandrillMessagesIds,
-            userId: { '!': null }
+            userId: { $ne: null }
         });
 
         return _.uniq(_.pluck(emailLogs, "userId"));
@@ -290,7 +296,7 @@ function saveEventsContent(mandrillMessagesIds, logger) {
                             info: metadata.info
                         };
 
-                        yield EmailContent.updateOne({ id: emailContent.id }, updateAttrs);
+                        yield EmailContent.findByIdAndUpdate(emailContent.id, updateAttrs, { new: true });
                     }
                 } catch (e) {
                     logger.error({

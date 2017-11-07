@@ -1,4 +1,4 @@
-/* global EmailTemplateService, Media, Passport, StelaceConfigService, StelaceEventService, User */
+/* global EmailTemplateService, StelaceConfigService, StelaceEventService */
 
 var fs       = require('fs');
 var path     = require('path');
@@ -7,6 +7,12 @@ var passport = require('passport');
 var request  = require('request');
 var uuid     = require('uuid');
 var gm       = require('gm');
+
+const {
+    Media,
+    Passport,
+    User,
+} = require('../models_new');
 
 Promise.promisifyAll(fs);
 Promise.promisifyAll(request, { multiArgs: true });
@@ -160,7 +166,7 @@ passport.connect = function (req, query, profile, next) {
                 }
             })
             .then(user => {
-                query.user = user.id;
+                query.userId = user.id;
 
                 return [
                     user,
@@ -198,19 +204,19 @@ passport.connect = function (req, query, profile, next) {
             .then(() => {
                 // If the tokens have changed since the last session, update them
                 if (query.hasOwnProperty("tokens") && query.tokens !== passport.tokens) {
-                    return Passport.updateOne(passport.id, { tokens: query.tokens });
+                    return Passport.findByIdAndUpdate(passport.id, { tokens: query.tokens }, { new: true });
                 }
 
                 return passport;
             })
             .then(passport => {
                 // Fetch the user associated with the Passport
-                return User.findOne({ id: passport.user });
+                return User.findById(passport.user);
             });
     }
 
     function connectNewPassport(query, req) {
-        query.user = req.user.id;
+        query.userId = req.user.id;
 
         return Passport
             .create(query)
@@ -291,7 +297,7 @@ passport.connect = function (req, query, profile, next) {
                     ];
                 })
                 .spread(media => {
-                    return User.updateOne(user.id, { mediaId: media.id });
+                    return User.findByIdAndUpdate(user.id, { mediaId: media.id }, { new: true });
                 })
                 .catch(() => {
                     return fs.unlinkAsync(filepath)

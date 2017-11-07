@@ -38,6 +38,8 @@ function parsePagination(attrs) {
         pagination.limit = limit;
     }
 
+    pagination.skip = (pagination.page - 1) * pagination.limit;
+
     return pagination;
 }
 

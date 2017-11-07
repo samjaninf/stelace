@@ -1,4 +1,11 @@
-/* global Listing, ListingCategory, ListingXTag, LoggerService, StelaceConfigService, Tag */
+/* global LoggerService, StelaceConfigService */
+
+const {
+    Listing,
+    ListingCategory,
+    ListingXTag,
+    Tag,
+} = require('../models_new');
 
 module.exports = {
 
@@ -460,7 +467,7 @@ async function triggerSyncListings() {
             tags,
             listingsXTags,
         ] = await Promise.all([
-            Listing.find({ id: listingsIds }),
+            Listing.find({ _id: listingsIds }),
             ListingCategory.find(),
             Tag.find(),
             ListingXTag.find(),

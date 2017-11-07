@@ -1,7 +1,15 @@
 /*
-    global Assessment, AssessmentGamificationService, AssessmentService, Booking, Conversation,
-    EmailTemplateService, Listing, ListingHistoryService, SmsTemplateService, User
+    global AssessmentGamificationService, AssessmentService,
+    EmailTemplateService, ListingHistoryService, SmsTemplateService
  */
+
+const {
+    Assessment,
+    Booking,
+    Conversation,
+    Listing,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -18,8 +26,8 @@ const moment = require('moment');
  * find assessments from conversation (input, output, before input, before output)
  * before assessments are used as placeholders for the current editing assessment
  * so there can be none if no needed
- * @param  {number} conversationId
- * @param  {number} [userId] - if provided, check if the user can get those assessments
+ * @param  {ObjectId} conversationId
+ * @param  {ObjectId} [userId] - if provided, check if the user can get those assessments
  * @return {Promise<object>} hashAssessments
  * @return {object}          hashAssessments.inputAssessment
  * @return {object}          hashAssessments.outputAssessement
@@ -27,7 +35,7 @@ const moment = require('moment');
  * @return {object}          hashAssessments.beforeOutputAssessement
  */
 async function findAssessments(conversationId, userId) {
-    var conversation = await Conversation.findOne({ id: conversationId });
+    var conversation = await Conversation.findById(conversationId);
     if (! conversation) {
         throw new NotFoundError();
     }
@@ -56,17 +64,17 @@ async function findAssessments(conversationId, userId) {
     var assessments = listingHistory.getAssessments();
 
     if (conversation.inputAssessmentId) {
-        inputAssessment = _.find(assessments, { id: conversation.inputAssessmentId });
+        inputAssessment = _.find(assessments, assessment => µ.isSameId(assessment.id, conversation.inputAssessmentId));
 
         // listing history doens't take into account bookings that isn't accepted and paid (pre-booking)
         // so fetch it manually
         if (! inputAssessment) {
-            inputAssessment = await Assessment.findOne({ id: conversation.inputAssessmentId });
+            inputAssessment = await Assessment.findById(conversation.inputAssessmentId);
             manualFetchInput = true;
         }
     }
     if (conversation.outputAssessmentId) {
-        outputAssessment = _.find(assessments, { id: conversation.outputAssessmentId });
+        outputAssessment = _.find(assessments, assessment => µ.isSameId(assessment.id, conversation.outputAssessmentId));
     }
 
     if ((conversation.inputAssessmentId && ! inputAssessment)
@@ -139,7 +147,7 @@ function createAssessment(args) {
 
         if (typeof beforeAssessment === "undefined") {
             beforeAssessment = yield Assessment.getLastSigned(booking.listingId);
-        } else if (beforeAssessment.listingId !== booking.listingId) {
+        } else if (µ.isSameId(beforeAssessment.listingId, booking.listingId)) {
             throw new BadRequestError("the before assessment and booking don't match on listing id");
         }
 
@@ -162,13 +170,13 @@ function createAssessment(args) {
 
 /**
  * update assessment
- * @param  {number} assessmentId
+ * @param  {ObjectId} assessmentId
  * @param  {object} updateAttrs
  * @param  {string} updateAttrs.workingLevel
  * @param  {string} updateAttrs.cleanlinessLevel
  * @param  {string} updateAttrs.comment
  * @param  {string} updateAttrs.commentDiff
- * @param  {number} userId
+ * @param  {ObjectId} userId
  * @return {Promise<object} updated assessment
  */
 function updateAssessment(assessmentId, updateAttrs, userId) {
@@ -188,27 +196,27 @@ function updateAssessment(assessmentId, updateAttrs, userId) {
             throw new BadRequestError();
         }
 
-        var assessment = yield Assessment.findOne({ id: assessmentId });
+        var assessment = yield Assessment.findById(assessmentId);
         if (! assessment) {
             throw new NotFoundError();
         }
         // the user that can edit assessment is the one that gives the listing
-        if (Assessment.getRealGiverId(assessment) !== userId) {
+        if (!µ.isSameId(Assessment.getRealGiverId(assessment), userId)) {
             throw new ForbiddenError();
         }
         if (assessment.signedDate) {
             throw new ForbiddenError("assessment signed");
         }
 
-        return yield Assessment.updateOne(assessment.id, updateAttrs);
+        return yield Assessment.findByIdAndUpdate(assessment.id, updateAttrs, { new: true });
     })();
 }
 
 /**
  * sign assessment with the token
- * @param  {number} assessmentId
+ * @param  {ObjectId} assessmentId
  * @param  {string} signToken
- * @param  {number} userId
+ * @param  {ObjectId} userId
  * @param  {object} logger
  * @param  {object} [req] - useful for gamification
  * @return {Promise<object>} signed assessment
@@ -216,12 +224,12 @@ function updateAssessment(assessmentId, updateAttrs, userId) {
 async function signAssessment(assessmentId, signToken, userId, logger, req) {
     const now = moment().toISOString();
 
-    let assessment = await Assessment.findOne({ id: assessmentId });
+    let assessment = await Assessment.findById(assessmentId);
     if (! assessment) {
         throw new NotFoundError();
     }
     // the user that can sign assessment is the one that gives the listing
-    if (Assessment.getRealGiverId(assessment) !== userId) {
+    if (!µ.isSameId(Assessment.getRealGiverId(assessment), userId)) {
         throw new ForbiddenError();
     }
     if (! assessment.workingLevel
@@ -242,7 +250,7 @@ async function signAssessment(assessmentId, signToken, userId, logger, req) {
     let outputAssessment;
 
     if (assessment.startBookingId) {
-        startBooking = await Booking.findOne({ id: assessment.startBookingId });
+        startBooking = await Booking.findById(assessment.startBookingId);
         if (! startBooking) {
             const error = new Error('Assessment start booking not found');
             error.assessmentId = assessment.id;
@@ -277,7 +285,7 @@ async function signAssessment(assessmentId, signToken, userId, logger, req) {
     const snapshots = await Assessment.getSnapshots(assessment);
     _.assign(updateAttrs, Assessment.getSnapshotsIds(snapshots));
 
-    assessment = await Assessment.updateOne(assessment.id, updateAttrs);
+    assessment = await Assessment.findByIdAndUpdate(assessment.id, updateAttrs, { new: true });
 
     AssessmentGamificationService.afterAssessmentSigned(assessment, logger, req);
 
@@ -314,7 +322,7 @@ function createOutputAssessment(assessment, startBooking) {
 
 function setEndOfBooking(assessment, now) {
     return Promise.coroutine(function* () {
-        var endBooking = yield Booking.findOne({ id: assessment.endBookingId });
+        var endBooking = yield Booking.findById(assessment.endBookingId);
 
         if (! endBooking) {
             var error = new Error("Assessment end booking not found");
@@ -360,11 +368,11 @@ function _sendAssessmentEmailsSms(data) {
             .resolve()
             .then(() => {
                 return [
-                    Listing.findOne({ id: assessment.listingId }),
-                    assessment.startBookingId ? Booking.findOne({ id: assessment.startBookingId }) : null,
-                    assessment.endBookingId ? Booking.findOne({ id: assessment.endBookingId }) : null,
-                    User.findOne({ id: assessment.ownerId }),
-                    User.findOne({ id: assessment.takerId }),
+                    Listing.findById(assessment.listingId),
+                    assessment.startBookingId ? Booking.findById(assessment.startBookingId) : null,
+                    assessment.endBookingId ? Booking.findById(assessment.endBookingId) : null,
+                    User.findById(assessment.ownerId),
+                    User.findById(assessment.takerId),
                     getConversation(assessment)
                 ];
             })
@@ -416,7 +424,7 @@ function _sendAssessmentEmailsSms(data) {
     function getConversation(assessment) {
         return Conversation
             .findOne({
-                or: [
+                $or: [
                     { outputAssessmentId: assessment.id },
                     { inputAssessmentId: assessment.id }
                 ]

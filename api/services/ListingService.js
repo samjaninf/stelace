@@ -1,6 +1,10 @@
 /*
-    global Listing, StelaceEventService
+    global StelaceEventService
 */
+
+const {
+    Listing,
+} = require('../models_new');
 
 module.exports = {
 
@@ -12,7 +16,7 @@ var moment = require('moment');
 
 /**
  * toggle listing paused state
- * @param  {number} options.listingId
+ * @param  {ObjectId} options.listingId
  * @param  {boolean} [options.pause] - can force state rather than toggling
  * @param  {string} options.pausedUntil
  * @param  {object} options.req
@@ -27,12 +31,12 @@ function pauseListingToggle({ listingId, pause, pausedUntil, req, res }) {
     }
 
     return Promise.coroutine(function* () {
-        var listing = yield Listing.findOne({ id: listingId });
+        var listing = yield Listing.findById(listingId);
 
         if (! listing) {
             throw new NotFoundError();
         }
-        if (! req.user || listing.ownerId !== req.user.id) {
+        if (! req.user || !µ.isSameId(listing.ownerId, req.user.id)) {
             throw new ForbiddenError();
         }
 
@@ -48,7 +52,7 @@ function pauseListingToggle({ listingId, pause, pausedUntil, req, res }) {
             locked: pauseState
         };
 
-        var updatedListing = yield Listing.updateOne(listing.id, updateAttrs);
+        var updatedListing = yield Listing.findByIdAndUpdate(listing.id, updateAttrs, { new: true });
 
         const listingLocked = listing.locked && ! listing.pausedUntil;
         let data;

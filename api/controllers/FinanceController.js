@@ -1,4 +1,8 @@
-/* global TimeService, User */
+/* global TimeService */
+
+const {
+    User,
+} = require('../models_new');
 
 /**
  * FinanceController
@@ -9,36 +13,10 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     createAccount: createAccount,
     createBankAccount: createBankAccount
 
 };
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
 
 function createAccount(req, res) {
     var filteredAttrs = [
@@ -59,10 +37,10 @@ function createAccount(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return req.user.createMangopayUser(createAttrs);
+            return User.createMangopayUser(req.user, createAttrs);
         })
         .then(user => {
-            return user.createWallet();
+            return User.createWallet(user);
         })
         .then(user => {
             res.json(User.expose(user, access));
@@ -76,7 +54,7 @@ function createBankAccount(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return req.user.createBankAccount();
+            return User.createBankAccount(req.user);
         })
         .then(user => {
             res.json(User.expose(user, access));

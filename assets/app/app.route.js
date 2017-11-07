@@ -48,7 +48,7 @@
                         StelaceEvent) {
         var log = $log.getInstance("app.route runBlock");
 
-        var eventId    = parseInt(document.body.getAttribute("data-event-id"), 10);
+        var eventId    = document.body.getAttribute("data-event-id");
         var eventToken = document.body.getAttribute("data-event-token");
 
         if (eventId && eventToken) {

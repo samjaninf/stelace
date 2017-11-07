@@ -1,4 +1,9 @@
-/* global Bookmark, Listing, TimeService */
+/* global TimeService */
+
+const {
+    Bookmark,
+    Listing,
+} = require('../models_new');
 
 /**
  * BookmarkController
@@ -9,24 +14,13 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
     create: create,
-    update: update,
     destroy: destroy,
 
     destroyLink: destroyLink,
     my: my
 
 };
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
 
 function create(req, res) {
     var filteredAttrs = [
@@ -49,13 +43,13 @@ function create(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return Listing.findOne({ id: attrs.listingId });
+            return Listing.findById(attrs.listingId);
         })
         .then(listing => {
             if (! listing) {
                 throw new NotFoundError;
             }
-            if (listing.ownerId === req.user.id) {
+            if (µ.isSameId(listing.ownerId, req.user.id)) {
                 throw new ForbiddenError("owner can't bookmark own listings");
             }
 
@@ -67,7 +61,7 @@ function create(req, res) {
         .then(bookmark => {
             if (bookmark) {
                 attrs.active = true;
-                return Bookmark.updateOne(bookmark.id, attrs);
+                return Bookmark.findByIdAndUpdate(bookmark.id, attrs, { new: true });
             } else {
                 attrs.userId = req.user.id;
                 return Bookmark.create(attrs);
@@ -77,10 +71,6 @@ function create(req, res) {
             res.json(Bookmark.expose(bookmark, access));
         })
         .catch(res.sendError);
-}
-
-function update(req, res) {
-    return res.forbidden();
 }
 
 function destroy(req, res) {
@@ -93,12 +83,12 @@ function destroy(req, res) {
     return Bookmark
         .update(
             {
-                id: id,
+                _id: id,
                 token: token
             },
             { active: false }
         )
-        .then(() => res.ok({ id: id }))
+        .then(() => res.ok({ id }))
         .catch(res.sendError);
 }
 
@@ -113,20 +103,20 @@ function destroyLink(req, res) {
         .resolve()
         .then(() => {
             return Bookmark
-                .update(
+                .findOneAndUpdate(
                     {
-                        id: id,
+                        _id: id,
                         token: token
                     },
                     { active: false }
                 );
         })
-        .then(bookmarks => {
-            if (! bookmarks.length) {
+        .then(bookmark => {
+            if (! bookmark) {
                 res.redirect("/?destroy-bookmark=success");
             } else {
                 return Listing
-                    .findOne({ id: bookmarks[0].listingId })
+                    .findById(bookmark.listingId)
                     .then(listing => {
                         if (! listing) {
                             res.redirect("/?destroy-bookmark=success");

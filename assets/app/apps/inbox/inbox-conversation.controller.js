@@ -34,7 +34,7 @@
         var listeners      = [];
         var intervals      = [];
         var formatDate     = "YYYY-MM-DD";
-        var conversationId = parseInt($stateParams.conversationId, 10);
+        var conversationId = $stateParams.conversationId;
         var messages       = [];
         var conversation;
         var currentUser;
@@ -65,7 +65,7 @@
         function activate() {
             moment.locale("fr");
 
-            if (! $stateParams.conversationId || isNaN(conversationId)) {
+            if (! $stateParams.conversationId || !tools.isObjectId(conversationId)) {
                 return $state.go("inbox"); // must return to prevent populateConversation from triggering
             }
 

@@ -10,10 +10,6 @@
 module.exports = {
 
     find,
-    findOne,
-    create,
-    update,
-    destroy,
 
 };
 
@@ -24,20 +20,4 @@ async function find(req, res) {
     } catch (err) {
         res.sendError(err);
     }
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }

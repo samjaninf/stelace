@@ -1,6 +1,14 @@
 /* global
-    Booking, BookingPaymentService, BookingService, Cancellation, Conversation, Listing, MathService, User
+    BookingPaymentService, BookingService, MathService
 */
+
+const {
+    Booking,
+    Cancellation,
+    Conversation,
+    Listing,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -118,9 +126,9 @@ function cancelBooking(booking, transactionManager, args) {
             yield Booking.updateListingQuantity(booking, { actionType: 'add' });
         }
 
-        booking = yield Booking.updateOne(booking.id, {
+        booking = yield Booking.findByIdAndUpdate(booking.id, {
             cancellationId: cancellation.id
-        });
+        }, { new: true });
         return booking;
     })();
 }
@@ -156,7 +164,7 @@ function updateConversation(booking, reasonType, removeInputAssessment) {
         updateAttrs.agreementStatus = agreementStatus;
 
         // the conversation can be not existing (e.g. booking before payment without message)
-        return yield Conversation.update({ bookingId: booking.id }, updateAttrs);
+        yield Conversation.update({ bookingId: booking.id }, updateAttrs);
     })();
 }
 
@@ -182,7 +190,7 @@ function cancelBookingPayment(booking, transactionManager, args) {
     var error;
 
     return Promise.coroutine(function* () {
-        var taker = yield User.findOne({ id: booking.takerId });
+        var taker = yield User.findById(booking.takerId);
         if (! taker) {
             error = new Error("Taker not found");
             error.takerId = booking.takerId;
@@ -220,7 +228,7 @@ function cancelBookingPayment(booking, transactionManager, args) {
             throw error;
         }
 
-        var owner = yield User.findOne({ id: booking.ownerId });
+        var owner = yield User.findById(booking.ownerId);
         if (! owner) {
             error = new Error("Owner not found");
             error.ownerId = booking.ownerId;
@@ -271,7 +279,7 @@ async function cancelOtherBookings(booking, logger) {
     // do not cancel any bookings if there is no availability issues
     if (AVAILABILITY === 'NONE') return;
 
-    const listing = await Listing.findOne({ id: booking.listingId });
+    const listing = await Listing.findById(booking.listingId);
     if (!listing) {
         throw new NotFoundError();
     }
@@ -283,8 +291,8 @@ async function cancelOtherBookings(booking, logger) {
     if (TIME === 'NONE') {
         otherBookings = await Booking.find({
             listingId: booking.listingId,
-            quantity: { '>': listing.quantity },
-            id: { '!': booking.id },
+            quantity: { $gt: listing.quantity },
+            _id: { $ne: booking.id },
             paidDate: null,
             cancellationId: null,
         });
@@ -301,7 +309,7 @@ async function cancelOtherBookings(booking, logger) {
 
         // in some configuration, the current booking is not yet considered as future, so add it manually
         const refBookingInFuture = !!_.find(futureBookings, futureBooking => {
-            return futureBooking.id === booking.id;
+            return µ.isSameId(futureBooking.id, booking.id);
         });
         if (!refBookingInFuture) {
             futureBookings.push(booking);

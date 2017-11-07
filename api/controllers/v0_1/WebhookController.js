@@ -1,4 +1,8 @@
-/* global UrlService, Webhook */
+/* global UrlService */
+
+const {
+    Webhook,
+} = require('../../models_new');
 
 module.exports = {
 
@@ -51,9 +55,9 @@ async function destroy(req, res) {
     const id = req.param('id');
 
     try {
-        await Webhook.destroy({
+        await Webhook.remove({
             apiKeyId: req.apiKey.id,
-            id,
+            _id: id,
         });
 
         res.ok();

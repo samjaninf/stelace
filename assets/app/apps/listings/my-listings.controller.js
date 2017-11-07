@@ -44,7 +44,7 @@
         var nbDaysPricing           = 7;
         var breakpointDays          = [3, 7, 14, 28];
         var lastBreakpointDay       = _.last(breakpointDays);
-        var listingId                  = parseInt($stateParams.id, 10);
+        var listingId                  = $stateParams.id;
         var tags                    = [];  // save tag bindings until search
         var mediaSelectionInitiated = false;
         var savingListing              = false;

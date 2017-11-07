@@ -1,4 +1,8 @@
-/* global Booking, Listing, Rating */
+const {
+    Booking,
+    Listing,
+    Rating,
+} = require('../models_new');
 
 module.exports = {
 
@@ -93,7 +97,7 @@ function matchSignCondition(assessment, signed) {
 ListingHistory.prototype.getBeforeAssessment = function (assessmentId) {
     var reversedAssessments = this.getAssessments().reverse();
 
-    var index = _.findIndex(reversedAssessments, { id: assessmentId });
+    var index = _.findIndex(reversedAssessments, assessment => µ.isSameId(assessment.id, assessmentId));
 
     // no assessment found
     if (index === -1) {
@@ -110,7 +114,7 @@ ListingHistory.prototype.getLastSignedAssessment = function () {
 
 /**
  * get ratings from assessment
- * @param  {number}  assessmentId
+ * @param  {ObjectId}  assessmentId
  *
  * @return {object[]} ratings
  */
@@ -128,9 +132,9 @@ ListingHistory.prototype.getRatings = function (assessmentId) {
 };
 
 ListingHistory.prototype.isInputAssessment = function (step, assessmentId) {
-    return step.inputAssessment && step.inputAssessment.id === assessmentId;
+    return step.inputAssessment && µ.isSameId(step.inputAssessment.id, assessmentId);
 };
 
 ListingHistory.prototype.isOutputAssessment = function (step, assessmentId) {
-    return step.outputAssessment && step.outputAssessment.id === assessmentId;
+    return step.outputAssessment && µ.isSameId(step.outputAssessment.id, assessmentId);
 };

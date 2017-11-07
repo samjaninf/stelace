@@ -1,6 +1,10 @@
 module.exports = {
 
     isEmail: isEmail,
+    isMongoId: isMongoId,
+    getObjectIdString: getObjectIdString,
+    includesObjectId: includesObjectId,
+    isSameId: isSameId,
     checkArray: checkArray,
     sendError: sendError,
     getPrivateIp: getPrivateIp,
@@ -9,8 +13,9 @@ module.exports = {
 
 };
 
-var fs = require('fs');
-var os = require('os');
+const fs = require('fs');
+const os = require('os');
+const mongoose = require('mongoose');
 
 Promise.promisifyAll(fs);
 
@@ -18,6 +23,49 @@ function isEmail(emailToTest, maxLength) {
     maxLength = maxLength || 255;
     var emailRegex = /^[a-z0-9._-]+@[a-z0-9._-]{2,}\.[a-z]{2,}$/;
     return (typeof emailToTest === "string") && (emailRegex.test(emailToTest)) && (emailToTest.length < maxLength);
+}
+
+function isMongoId(id) {
+    return mongoose.Types.ObjectId.isValid(id);
+}
+
+function getObjectIdString(id) {
+    if (!isMongoId(id)) {
+        throw new Error('Expected valid ObjectId');
+    }
+
+    if (id instanceof mongoose.Types.ObjectId) {
+        return id.toHexString();
+    } else {
+        return id;
+    }
+}
+
+function includesObjectId(array, id) {
+    return array.reduce((memo, value) => {
+        if (isSameId(value, id)) {
+            return true;
+        }
+        return memo;
+    }, false);
+}
+
+function isSameId(id1, id2) {
+    if ((!(id1 instanceof mongoose.Types.ObjectId) && typeof id1 !== 'string')
+     || (!(id2 instanceof mongoose.Types.ObjectId) && typeof id2 !== 'string')
+    ) {
+        return false;
+    }
+
+    if (id1 instanceof mongoose.Types.ObjectId) {
+        return id1.equals(id2);
+    } else {
+        try {
+            return mongoose.Types.ObjectId(id1).equals(id2);
+        } catch (e) {
+            return false;
+        }
+    }
 }
 
 function checkArray(arrayToTest, typeOrFunction, options) {
@@ -32,6 +80,10 @@ function checkArray(arrayToTest, typeOrFunction, options) {
         isValid = function (item) {
             return ! isNaN(item) && item > 0;
         };
+    } else if (typeOrFunction === 'mongoId') {
+        isValid = function (item) {
+            return isMongoId(item);
+        }
     } else if (typeOrFunction === "string") {
         isValid = function (item) {
             return (typeof item === "string") && (options.maxLength ? item.length <= options.maxLength : true);

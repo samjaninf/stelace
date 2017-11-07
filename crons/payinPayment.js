@@ -1,4 +1,4 @@
-/* global Booking, BookingPaymentService, BootstrapService, LoggerService, TransactionService, User */
+/* global BookingPaymentService, BootstrapService, LoggerService, TransactionService */
 
 var Sails = require('sails');
 
@@ -6,6 +6,11 @@ var cronTaskName = "payinPayment";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Booking,
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -41,8 +46,8 @@ Sails.load({
         var bookings = yield Booking.find({
             paymentUsedDate: null,
             cancellationId: null,
-            paidDate: { '!': null },
-            acceptedDate: { '!': null }
+            paidDate: { $ne: null },
+            acceptedDate: { $ne: null }
         });
 
         if (! bookings.length) {
@@ -54,7 +59,7 @@ Sails.load({
 
         var result = yield Promise.props({
             hashTransactionsManagers: TransactionService.getBookingTransactionsManagers(bookingsIds),
-            takers: User.find({ id: takersIds })
+            takers: User.find({ _id: takersIds })
         });
 
         var hashTransactionsManagers = result.hashTransactionsManagers;

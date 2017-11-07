@@ -1,4 +1,8 @@
-/* global GamificationService, User */
+/* global GamificationService */
+
+const {
+    User,
+} = require('../models_new');
 
 /**
  * GamificationController
@@ -9,37 +13,11 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     params: params,
     getStats: getStats,
     updateProgressView: updateProgressView
 
 };
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
 
 function params(req, res) {
     var levelsOrder = GamificationService.getLevelsOrder();
@@ -113,7 +91,7 @@ function updateProgressView(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return User.updateOne(req.user.id, updateAttrs);
+            return User.findByIdAndUpdate(req.user.id, updateAttrs, { new: true });
         })
         .then(user => {
             res.json(User.expose(user, access));

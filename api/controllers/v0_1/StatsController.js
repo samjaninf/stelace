@@ -1,4 +1,10 @@
-/* global Booking, Listing, StatsService, User */
+/* global StatsService */
+
+const {
+    Booking,
+    Listing,
+    User,
+} = require('../../models_new');
 
 module.exports = {
 
@@ -22,8 +28,8 @@ async function userRegistered(req, res) {
             .find({
                 destroyed: false,
                 createdDate: {
-                    '>=': startDate,
-                    '<': upperEndDate,
+                    $gte: startDate,
+                    $lt: upperEndDate,
                 },
             })
             .sort({ createdDate: 1 });
@@ -51,8 +57,8 @@ async function listingPublished(req, res) {
         const listings = await Listing
             .find({
                 createdDate: {
-                    '>=': startDate,
-                    '<': upperEndDate,
+                    $gte: startDate,
+                    $lt: upperEndDate,
                 },
             })
             .sort({ createdDate: 1 });
@@ -80,8 +86,8 @@ async function bookingPaid(req, res) {
         const bookings = await Booking
             .find({
                 paidDate: {
-                    '>=': startDate,
-                    '<': upperEndDate,
+                    $gte: startDate,
+                    $lt: upperEndDate,
                 },
             })
             .sort({ paidDate: 1 });

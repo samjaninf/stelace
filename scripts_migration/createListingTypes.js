@@ -1,9 +1,13 @@
-/* global BootstrapService, ListingType */
+/* global BootstrapService */
 
 const Sails = require('sails');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    ListingType,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -83,7 +87,7 @@ Sails.load({
             await Promise.each(listingTypes, async (attrs) => {
                 const listingType = await ListingType.findOne({ name: attrs.name });
                 if (listingType) {
-                    const l = await ListingType.updateOne(listingType.id, attrs);
+                    const l = await ListingType.findByIdAndUpdate(listingType.id, attrs, { new: true });
                     indexedListingTypes[l.name] = l;
                 } else {
                     const l = await ListingType.create(attrs);
@@ -105,7 +109,7 @@ Sails.load({
         //     if (listing.sellable) {
         //         updateAttrs.listingTypesIds.push(indexedListingTypes['SELLING'].id);
         //     }
-        //     return Listing.updateOne(listing.id, updateAttrs);
+        //     return Listing.findByIdAndUpdate(listing.id, updateAttrs, { new: true });
         // });
     } catch (err) {
         console.log(err);

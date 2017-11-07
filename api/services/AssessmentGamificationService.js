@@ -1,4 +1,9 @@
-/* global Booking, GamificationService, User */
+/* global GamificationService */
+
+const {
+    Booking,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -21,7 +26,7 @@ function afterAssessmentSigned(assessment, logger, req) {
                 // if it's the input assessment and the user is owner or taker
                 // then check friend actions as referer
                 if (startBooking
-                 && _.contains([assessment.ownerId, assessment.takerId], user.id)
+                 && µ.includesObjectId([assessment.ownerId, assessment.takerId], user.id)
                 ) {
                     yield checkRefererActions(user, startBooking, logger, req);
                 }
@@ -41,14 +46,14 @@ function getAfterAssessmentSignedData(assessment) {
         ]));
 
         var result = yield Promise.props({
-            users: User.find({ id: usersIds }),
-            startBooking: assessment.startBookingId ? Booking.findOne({ id: assessment.startBookingId }) : null,
-            endBooking: assessment.endBookingId ? Booking.findOne({ id: assessment.endBookingId }) : null
+            users: User.find({ _id: usersIds }),
+            startBooking: assessment.startBookingId ? Booking.findById(assessment.startBookingId) : null,
+            endBooking: assessment.endBookingId ? Booking.findById(assessment.endBookingId) : null
         });
 
         var users        = result.users;
-        var owner        = _.find(users, { id: assessment.ownerId });
-        var taker        = _.find(users, { id: assessment.takerId });
+        var owner        = _.find(users, user => µ.isSameId(user.id, assessment.ownerId));
+        var taker        = _.find(users, user => µ.isSameId(user.id, assessment.takerId));
         var startBooking = result.startBooking;
         var endBooking   = result.endBooking;
 

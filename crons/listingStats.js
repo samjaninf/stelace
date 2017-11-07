@@ -1,4 +1,4 @@
-/* global BootstrapService, Booking, Conversation, Listing, LoggerService, StelaceEvent */
+/* global BootstrapService, LoggerService */
 
 const Sails  = require('sails');
 const moment = require('moment');
@@ -8,6 +8,13 @@ const cronTaskName = "listingStats";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Booking,
+    Conversation,
+    Listing,
+    StelaceEvent,
+} = require('../api/models_new');
 
 const argv = yargs
     .usage("Usage: $0 --pastDays")
@@ -38,8 +45,8 @@ Sails.load({
     const pastDays = argv.pastDays || 1;
     const pastLimit = moment().subtract(pastDays, "d").startOf('day');
     const dateConstraints = {
-        ">=": pastLimit.toISOString(),
-        "<": moment().startOf('day').toISOString()
+        $gte: pastLimit.toISOString(),
+        $lt: moment().startOf('day').toISOString()
     };
 
     let info = {
@@ -80,7 +87,7 @@ Sails.load({
             .keys()
             .union(_.keys(groupedConversations))
             .value();
-        const listings   = yield Listing.find({ id: listingIds });
+        const listings   = yield Listing.find({ _id: listingIds });
 
         const indexedListings = _.indexBy(listings, "id");
         let listingUpdates = [];
@@ -94,11 +101,11 @@ Sails.load({
             const nbBookings = (indexedListings[listingId].nbBookings || 0) * 1 + listingBookings;
             const nbContacts = (indexedListings[listingId].nbContacts || 0) * 1 + listingConversations;
 
-            listingUpdates.push(Listing.updateOne(listingId, {
+            listingUpdates.push(Listing.findByIdAndUpdate(listingId, {
                 nbViews,
                 nbContacts,
                 nbBookings
-            }));
+            }, { new: true }));
         });
 
         info.listingsUpdated = listingUpdates.length;

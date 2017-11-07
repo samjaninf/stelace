@@ -1,7 +1,15 @@
 /* global
     EmailTemplateService, GamificationService, GeneratorService,
-    IncomeReportService, Location, Media, Passport, StelaceConfigService, StelaceEventService, Token, TokenService, ToolsService, User, UserService
+    IncomeReportService, StelaceConfigService, StelaceEventService, TokenService, ToolsService, UserService
 */
+
+const {
+    Location,
+    Media,
+    Passport,
+    Token,
+    User,
+} = require('../models_new');
 
 /**
  * UserController
@@ -14,9 +22,7 @@ module.exports = {
 
     find: find,
     findOne: findOne,
-    create: create,
     update: update,
-    destroy: destroy,
 
     me: me,
     params: params,
@@ -37,8 +43,8 @@ module.exports = {
 
 };
 
-var moment = require('moment');
-var fs     = require('fs');
+const moment = require('moment');
+const fs     = require('fs');
 
 Promise.promisifyAll(fs);
 
@@ -62,21 +68,21 @@ function find(req, res) {
             var queryConfig = getQueryConfig(query);
 
             return Promise.props({
-                ids: User.find({ id: queryConfig.ids }),
+                ids: User.find({ _id: queryConfig.ids }),
                 emails: User.find({
-                    or: _.map(queryConfig.emails, str => ({ email: { contains: str } }))
+                    $or: _.map(queryConfig.emails, str => ({ email: { $regex: str, $options: 'i' } }))
                 }),
                 firstnames: User.find({
-                    or: _.map(queryConfig.firstnames, str => ({ firstname: { contains: str } }))
+                    $or: _.map(queryConfig.firstnames, str => ({ firstname: { $regex: str, $options: 'i' } }))
                 }),
                 lastnames: User.find({
-                    or: _.map(queryConfig.lastnames, str => ({ lastname: { contains: str } }))
+                    $or: _.map(queryConfig.lastnames, str => ({ lastname: { $regex: str, $options: 'i' } }))
                 }),
                 aggFirstnames: User.find({
-                    or: _.map(queryConfig.aggregates, str => ({ firstname: { contains: str } }))
+                    $or: _.map(queryConfig.aggregates, str => ({ firstname: { $regex: str, $options: 'i' } }))
                 }),
                 aggLastnames: User.find({
-                    or: _.map(queryConfig.aggregates, str => ({ lastname: { contains: str } }))
+                    $or: _.map(queryConfig.aggregates, str => ({ lastname: { $regex: str, $options: 'i' } }))
                 })
             });
         })
@@ -119,9 +125,8 @@ function find(req, res) {
 
 
 
-    function getNumber(str) {
-        var parsedStr = parseInt(str, 10);
-        return ! isNaN(parsedStr) ? parsedStr : null;
+    function getMongoId(str) {
+        return µ.isMongoId(str) ? str : null;
     }
 
     function getQueryConfig(query) {
@@ -136,7 +141,7 @@ function find(req, res) {
         var tokens = _.compact(query.split(" "));
 
         _.forEach(tokens, token => {
-            var tokenId = getNumber(token);
+            var tokenId = getMongoId(token);
 
             if (tokenId) {
                 queryConfig.ids.push(tokenId);
@@ -189,10 +194,6 @@ async function findOne(req, res) {
     }
 }
 
-function create(req, res) {
-    return res.forbidden();
-}
-
 function update(req, res) {
     var filteredAttrs = [
         "firstname",
@@ -216,7 +217,7 @@ function update(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return User.updateOne(req.user.id, updateAttrs);
+            return User.findByIdAndUpdate(req.user.id, updateAttrs, { new: true });
         })
         .then(user => {
             return User.updateTags(user, updateAttrs.tagsIds);
@@ -244,10 +245,6 @@ function update(req, res) {
         .catch(res.sendError);
 }
 
-function destroy(req, res) {
-    return res.forbidden();
-}
-
 function me(req, res) {
     var access = "self";
 
@@ -265,7 +262,7 @@ function getAuthMeans(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return Passport.find({ user: req.user.id });
+            return Passport.find({ userId: req.user.id });
         })
         .then(passports => {
             var result = _.reduce(passports, (memo, passport) => {
@@ -310,7 +307,7 @@ function updateAddress(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return User.updateOne(req.user.id, { address: updateAttrs });
+            return User.findByIdAndUpdate(req.user.id, { address: updateAttrs }, { new: true });
         })
         .then(user => {
             res.json(User.expose(user, access));
@@ -340,7 +337,7 @@ function updatePassword(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return Passport.find({ user: id });
+            return Passport.find({ userId: id });
         })
         .then(passports => {
             var splitPassports = _.partition(passports, passport => {
@@ -361,10 +358,10 @@ function updatePassword(req, res) {
                 return Passport.create({
                     protocol: "local",
                     password: newPassword,
-                    user: id
+                    userId: id
                 });
             } else if (skipOldPassword) {
-                return Passport.updateOne(localPassport.id, { password: newPassword });
+                return Passport.findByIdAndUpdate(localPassport.id, { password: newPassword }, { new: true });
             } else {
                 if (typeof oldPassword !== "string") {
                     throw new BadRequestError();
@@ -379,11 +376,11 @@ function updatePassword(req, res) {
                             throw error;
                         }
 
-                        return Passport.updateOne(localPassport.id, { password: newPassword });
+                        return Passport.findByIdAndUpdate(localPassport.id, { password: newPassword }, { new: true });
                     });
             }
         })
-        .then(() => res.json({ id: id }))
+        .then(() => res.json({ id }))
         .catch(res.sendError);
 }
 
@@ -401,7 +398,7 @@ function updateEmail(req, res) {
     return Promise
         .resolve()
         .then(() => {
-            return User.updateOne(req.user.id, { email: email });
+            return User.findByIdAndUpdate(req.user.id, { email: email }, { new: true });
         })
         .then(user => {
             res.json(User.expose(user, access));
@@ -419,7 +416,7 @@ async function updatePhone(req, res) {
     }
 
     try {
-        const user = await User.updateOne(req.user.id, { phone, phoneCheck: false });
+        const user = await User.findByIdAndUpdate(req.user.id, { phone, phoneCheck: false }, { new: true });
         res.json(User.expose(user, access));
     } catch (err) {
         res.sendError(err);
@@ -482,7 +479,7 @@ function lostPassword(req, res) {
             .resolve()
             .then(() => {
                 return Passport.findOne({
-                    user: user.id,
+                    userId: user.id,
                     protocol: "local"
                 });
             })
@@ -493,7 +490,7 @@ function lostPassword(req, res) {
 
                 return Passport.create({
                     protocol: "local",
-                    user: user.id
+                    userId: user.id
                 });
             });
     }
@@ -517,7 +514,7 @@ function recoveryPassword(req, res) {
         .resolve()
         .then(() => {
             return Token.findOne({
-                id: tokenId,
+                _id: tokenId,
                 value: tokenValue
             });
         })
@@ -528,7 +525,7 @@ function recoveryPassword(req, res) {
                 error = new BadRequestError("TokenUsed");
                 error.expose = true;
                 throw error;
-            } else if (token.expirationDate < now) {
+            } else if (token.expirationDate.toISOString() < now) {
                 error = new BadRequestError("TokenExpired");
                 error.expose = true;
                 throw error;
@@ -550,12 +547,12 @@ function recoveryPassword(req, res) {
         return Promise
             .resolve()
             .then(() => {
-                return Token.updateOne(token.id, { usedDate: now });
+                return Token.findByIdAndUpdate(token.id, { usedDate: now }, { new: true });
             })
             .then(token => {
                 return Passport.updateOne(
                     {
-                        user: token.userId,
+                        userId: token.userId,
                         protocol: "local"
                     },
                     { password: password }
@@ -576,7 +573,7 @@ function emailNew(req, res) {
         .then(() => {
             return User.findOne({
                 email: email,
-                id: { '!': req.user.id }
+                _id: { $ne: req.user.id }
             });
         })
         .then(user => {
@@ -633,7 +630,7 @@ function emailCheck(req, res) {
                 }
 
                 if (! user.emailCheck) {
-                    return User.updateOne(user.id, { emailCheck: true })
+                    return User.findByIdAndUpdate(user.id, { emailCheck: true }, { new: true })
                         .then(user => {
                             GamificationService.checkActions(user, ["EMAIL_VALIDATION"], null, req.logger, req);
 
@@ -654,7 +651,7 @@ function emailCheck(req, res) {
             .resolve()
             .then(() => {
                 return Token.findOne({
-                    id: tokenId,
+                    _id: tokenId,
                     value: tokenValue,
                     type: "EMAIL_CHECK"
                 });
@@ -666,7 +663,7 @@ function emailCheck(req, res) {
 
                 return [
                     token,
-                    User.findOne({ id: token.userId })
+                    User.findById(token.userId)
                 ];
             })
             .spread((token, user) => {
@@ -679,7 +676,7 @@ function emailCheck(req, res) {
                         emailCheck: true,
                         email: token.reference.email
                     }),
-                    ! token.usedDate ? Token.updateOne(token.id, { usedDate: moment().toISOString() }) : null
+                    ! token.usedDate ? Token.findByIdAndUpdate(token.id, { usedDate: new Date() }, { new: true }) : null
                 ];
             })
             .spread((user, token) => {
@@ -703,7 +700,7 @@ function updateMedia(req, res) {
     var id = req.param("id");
     var mediaId = req.param("mediaId");
 
-    if (req.user.id !== parseInt(id, 10)) {
+    if (!µ.isSameId(req.user.id, id)) {
         return res.forbidden();
     }
 
@@ -713,12 +710,12 @@ function updateMedia(req, res) {
             return isValidMediaId(mediaId);
         })
         .then(() => {
-            return User.updateOne(req.user.id, { mediaId: mediaId });
+            return User.findByIdAndUpdate(req.user.id, { mediaId: mediaId }, { new: true });
         })
         .then(user => {
             GamificationService.checkActions(user, ["ADD_PROFILE_IMAGE"], null, req.logger, req);
 
-            res.ok({ id: id });
+            res.ok({ id });
         })
         .catch(res.sendError);
 
@@ -730,12 +727,12 @@ function updateMedia(req, res) {
         }
 
         return Media
-            .findOne({ id: mediaId })
+            .findById(mediaId)
             .then(media => {
                 if (! media) {
                     throw new NotFoundError();
                 }
-                if (req.user.id !== media.userId) {
+                if (!µ.isSameId(req.user.id, media.userId)) {
                     throw new ForbiddenError();
                 }
 
@@ -768,7 +765,7 @@ function unsubscribeLink(req, res) {
             viewAttrs.badParams = true;
         } else {
             yield sendStelaceEvent(req, res, user.id);
-            yield User.updateOne(user.id, { newsletter: false });
+            yield User.findByIdAndUpdate(user.id, { newsletter: false }, { new: true });
         }
     })()
     .catch(err => {
@@ -851,7 +848,7 @@ function getIncomeReportPdf(req, res) {
 
     return Promise.coroutine(function* () {
         var results = yield Promise.props({
-            user: User.findOne({ id: id }),
+            user: User.findById(id),
             token: Token.findOne({
                 type: TokenService.getIncomeReportTokenName(year),
                 value: tokenValue
@@ -867,7 +864,7 @@ function getIncomeReportPdf(req, res) {
         if (! token) {
             throw new ForbiddenError();
         }
-        if (token.expirationDate < moment().toISOString()) {
+        if (token.expirationDate < new Date()) {
             throw new ForbiddenError("token expired");
         }
 

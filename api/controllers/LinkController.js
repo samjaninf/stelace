@@ -1,4 +1,11 @@
-/* global EmailTemplateService, GamificationService, GamificationEvent, Link, Media, StelaceConfigService, StelaceEventService, User */
+/* global EmailTemplateService, GamificationService, StelaceConfigService, StelaceEventService */
+
+const {
+    GamificationEvent,
+    Link,
+    Media,
+    User,
+} = require('../models_new');
 
 /**
  * LinkController
@@ -9,12 +16,6 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     createReferredBy: createReferredBy,
     getFriends: getFriends,
     getReferer: getReferer,
@@ -24,33 +25,13 @@ module.exports = {
 
 var moment = require('moment');
 
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
-
 function createReferredBy(req, res) {
     var fromUserId   = req.param("fromUserId");
     var source       = req.param("source");
     var date         = req.param("date");
     var relationship = "refer";
 
-    if (fromUserId === req.user.id) {
+    if (µ.isSameId(fromUserId, req.user.id)) {
         return res.badRequest();
     }
 
@@ -66,7 +47,7 @@ function createReferredBy(req, res) {
         })
         .then(() => {
             return [
-                fromUserId ? User.findOne({ id: fromUserId }) : null,
+                fromUserId ? User.findById(fromUserId) : null,
                 Link.find({
                     fromUserId: req.user.id,
                     relationship: relationship
@@ -96,7 +77,7 @@ function createReferredBy(req, res) {
                         if (fromUser) {
                             if (emailLinkInfo) {
                                 // take the most recent referral action
-                                if (date && emailLinkInfo.link.createdDate < date) {
+                                if (date && emailLinkInfo.link.createdDate.toISOString() < date) {
                                     return getNewValidatedLink(null, fromUser, req.user, source, req.logger);
                                 } else {
                                     return getNewValidatedLink(emailLinkInfo.link, emailLinkInfo.fromUser, req.user, null, req.logger);
@@ -153,7 +134,7 @@ function createReferredBy(req, res) {
                 }
 
                 return User
-                    .findOne({ id: link.fromUserId })
+                    .findById(link.fromUserId)
                     .then(fromUser => {
                         if (! fromUser) {
                             var error = new Error("Fail to fetch from user in email link");
@@ -183,7 +164,7 @@ function createReferredBy(req, res) {
                         updateAttrs.source = source;
                     }
 
-                    return Link.updateOne(link.id, updateAttrs);
+                    return Link.findByIdAndUpdate(link.id, updateAttrs, { new: true });
                 } else {
                     return Link.create({
                         fromUserId: fromUser.id,
@@ -227,10 +208,10 @@ function getFriends(req, res) {
         .then(() => {
             return [
                 Link.find({
-                    fromUserId: { '!': req.user.id },
+                    fromUserId: { $ne: req.user.id },
                     relationship: "refer",
                     validated: true,
-                    email: { '!': null }
+                    email: { $ne: null }
                 }),
                 Link
                     .find({
@@ -275,7 +256,7 @@ function getFriends(req, res) {
                 };
 
                 if (link.toUserId) {
-                    _.assign(obj, indexedUsers[link.toUserId] || {});
+                    _.assign(obj, indexedUsers[link.toUserId] ? indexedUsers[link.toUserId].toJSON() : {});
                 }
                 if (link.email) {
                     obj.email = obj.email || link.email;
@@ -394,12 +375,12 @@ function sendFriendEmails(req, res) {
         .then(() => {
             return [
                 User.find({
-                    email: { '!': null }
+                    email: { $ne: null }
                 }),
                 Link.find({
                     relationship: "refer",
                     validated: true,
-                    email: { '!': null }
+                    email: { $ne: null }
                 }),
                 Link
                     .find({
@@ -463,7 +444,7 @@ function sendFriendEmails(req, res) {
 
             var lastLink = _.last(indexedLinks[email]);
 
-            return lastLink.createdDate < moment().subtract(durationDays, "d").toISOString();
+            return lastLink.createdDate.toISOString() < moment().subtract(durationDays, "d").toISOString();
         });
 
         return debouncedEmails;
@@ -492,7 +473,7 @@ function _getUsers(usersIds, access) {
     return Promise
         .resolve()
         .then(() => {
-            return User.find({ id: usersIds });
+            return User.find({ _id: usersIds });
         })
         .then(users => {
             return [

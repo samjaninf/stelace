@@ -1,4 +1,6 @@
-/* global Media */
+const {
+    Media,
+} = require('../models_new');
 
 module.exports = {
 

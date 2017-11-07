@@ -30,6 +30,7 @@
         service.setLocalData     = setLocalData;
         service.isStopWord       = isStopWord;
         service.shouldObfuscateMessage = shouldObfuscateMessage;
+        service.isObjectId = isObjectId;
 
         return service;
 
@@ -444,6 +445,17 @@
             var emailRegEx = /\b[a-zA-Z0-9._%+-]+(?:@|AT|\[at\]|\[At\]|arobase|Arobase)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}\b/g;
 
             return phoneRegEx.test(text) || emailRegEx.test(text);
+        }
+
+        // https://github.com/cnkdynamics/valid-objectid
+        function isObjectId(id) {
+            if (!id || typeof id !== 'string') return false;
+
+            if (id.match(/^[0-9a-fA-F]{24}$/)) {
+                return true;
+            } else {
+                return false;
+            }
         }
     }
 

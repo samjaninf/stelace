@@ -1,6 +1,6 @@
 /* global
-    Assessment, Booking, BootstrapService, Conversation, EmailHelperService, EmailTemplateService, Listing, LoggerService, Media,
-    MonitoringService, Rating, SmsService, TimeService, ToolsService, User
+    BootstrapService, EmailHelperService, EmailTemplateService, LoggerService,
+    MonitoringService, SmsService, TimeService, ToolsService
 */
 
 var Sails = require('sails');
@@ -9,6 +9,16 @@ var cronTaskName = "sendReminderEmails";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Assessment,
+    Booking,
+    Conversation,
+    Listing,
+    Media,
+    Rating,
+    User,
+} = require('../api/models_new');
 
 var moment = require('moment');
 
@@ -303,9 +313,9 @@ Sails.load({
 
                 return [
                     bookings,
-                    User.find({ id: takersIds }),
-                    User.find({ id: ownerIds }),
-                    Listing.find({ id: listingsIds }),
+                    User.find({ _id: takersIds }),
+                    User.find({ _id: ownerIds }),
+                    Listing.find({ _id: listingsIds }),
                     Conversation.find({ bookingId: _.pluck(bookings, "id") }),
                 ];
             })
@@ -364,7 +374,7 @@ Sails.load({
 
                 return [
                     result,
-                    Media.find({ id: _.compact(_.pluck(result, "mediaId")) })
+                    Media.find({ _id: _.compact(_.pluck(result, "mediaId")) })
                 ];
             })
             .spread((result, medias) => {
@@ -384,19 +394,19 @@ Sails.load({
             .resolve()
             .then(() => {
                 return Booking.find({
-                    takerPrice: { '!': 0 },
-                    or: [
-                        { paidDate: { '>': lastCronDate } },
-                        { acceptedDate: { '>': lastCronDate } }
+                    takerPrice: { $ne: 0 },
+                    $or: [
+                        { paidDate: { $gt: lastCronDate } },
+                        { acceptedDate: { $gt: lastCronDate } }
                     ],
-                    paidDate: { '!': null },
-                    acceptedDate: { '!': null }
+                    paidDate: { $ne: null },
+                    acceptedDate: { $ne: null }
                 });
             })
             .then(bookings => {
                 return [
                     bookings,
-                    User.find({ id: _.pluck(bookings, "ownerId") })
+                    User.find({ _id: _.pluck(bookings, "ownerId") })
                 ];
             })
             .spread((bookings, owners) => {
@@ -429,7 +439,7 @@ Sails.load({
 
                 return [
                     result,
-                    Listing.find({ id: _.pluck(result, "listingId") }),
+                    Listing.find({ _id: _.pluck(result, "listingId") }),
                     Conversation.find({ bookingId: _.pluck(result, "bookingId") })
                 ];
             })
@@ -467,7 +477,7 @@ Sails.load({
 
                 return [
                     result,
-                    Media.find({ id: _.compact(_.pluck(result, "mediaId")) })
+                    Media.find({ _id: _.compact(_.pluck(result, "mediaId")) })
                 ];
             })
             .spread((result, medias) => {
@@ -520,9 +530,9 @@ Sails.load({
 
                 return [
                     result,
-                    User.find({ id: _.pluck(result, "takerId") }),
-                    User.find({ id: _.pluck(result, "giverId") }),
-                    Listing.find({ id: _.pluck(result, "listingId") })
+                    User.find({ _id: _.pluck(result, "takerId") }),
+                    User.find({ _id: _.pluck(result, "giverId") }),
+                    Listing.find({ _id: _.pluck(result, "listingId") })
                 ];
             })
             .spread((result, takers, givers, listings) => {
@@ -569,7 +579,7 @@ Sails.load({
 
                 return [
                     result,
-                    Media.find({ id: _.compact(_.pluck(result, "mediaId")) })
+                    Media.find({ _id: _.compact(_.pluck(result, "mediaId")) })
                 ];
             })
             .spread((result, medias) => {
@@ -622,9 +632,9 @@ Sails.load({
 
                 return [
                     result,
-                    User.find({ id: _.pluck(result, "takerId") }),
-                    User.find({ id: _.pluck(result, "giverId") }),
-                    Listing.find({ id: _.pluck(result, "listingId") })
+                    User.find({ _id: _.pluck(result, "takerId") }),
+                    User.find({ _id: _.pluck(result, "giverId") }),
+                    Listing.find({ _id: _.pluck(result, "listingId") })
                 ];
             })
             .spread((result, takers, givers, listings) => {
@@ -671,7 +681,7 @@ Sails.load({
 
                 return [
                     result,
-                    Media.find({ id: _.compact(_.pluck(result, "mediaId")) })
+                    Media.find({ _id: _.compact(_.pluck(result, "mediaId")) })
                 ];
             })
             .spread((result, medias) => {
@@ -694,8 +704,8 @@ Sails.load({
                 return Assessment.find({
                     cancellationId: null,
                     signedDate: {
-                        '<': periodLimits.max,
-                        '>=': periodLimits.min
+                        $gt: periodLimits.max,
+                        $gte: periodLimits.min
                     }
                 });
             })
@@ -717,7 +727,7 @@ Sails.load({
                 return [
                     assessments,
                     hashAssessments,
-                    Booking.find({ id: startBookingsIds })
+                    Booking.find({ _id: startBookingsIds })
                 ];
             })
             .spread((assessments, hashAssessments, startBookings) => {
@@ -763,8 +773,8 @@ Sails.load({
             .spread((result, assessments) => {
                 return [
                     result,
-                    Rating.find({ id: _.pluck(assessments, "id") }),
-                    Listing.find({ id: _.pluck(assessments, "listingId") })
+                    Rating.find({ _id: _.pluck(assessments, "id") }),
+                    Listing.find({ _id: _.pluck(assessments, "listingId") })
                 ];
             })
             .spread((result, ratings, listings) => {
@@ -789,8 +799,8 @@ Sails.load({
                         var realRatersId = []; // users that actually rated
 
                         realRatersId = _.reduce(ratings, (memo2, rating) => {
-                            if (_.contains(mustRatersId, rating.userId)
-                             && _.contains(mustRatersId, rating.targetId)
+                            if (µ.includesObjectId(mustRatersId, rating.userId)
+                             && µ.includesObjectId(mustRatersId, rating.targetId)
                              && Rating.isCompleteRating(rating)
                             ) {
                                 memo2.push(rating.userId);
@@ -798,14 +808,17 @@ Sails.load({
                             return memo2;
                         }, []);
 
-                        var noRatersIds = _.difference(mustRatersId, realRatersId);
+
+                        const mustRatersIdStr = mustRatersId.map(µ.getObjectIdString);
+                        const realRatersIdStr = realRatersId.map(µ.getObjectIdString);
+                        var noRatersIds = _.difference(mustRatersIdStr, realRatersIdStr);
 
                         _.forEach(noRatersIds, userId => {
                             var newObj = _.clone(obj);
 
                             newObj.listing     = listing;
                             newObj.userId   = userId;
-                            newObj.targetId = _.find(mustRatersId, id => id !== userId);
+                            newObj.targetId = _.find(mustRatersId, id => !µ.isSameId(id, userId));
                             newObj.mediaId  = listing.mediasIds[0];
 
                             memo.push(newObj);
@@ -817,9 +830,9 @@ Sails.load({
 
                 return [
                     result,
-                    User.find({ id: _.pluck(result, "userId") }),
-                    User.find({ id: _.pluck(result, "targetId") }),
-                    Media.find({ id: _.pluck(result, "mediaId") })
+                    User.find({ _id: _.pluck(result, "userId") }),
+                    User.find({ _id: _.pluck(result, "targetId") }),
+                    Media.find({ _id: _.pluck(result, "mediaId") })
                 ];
             })
             .spread((result, users, targets, medias) => {
@@ -917,7 +930,7 @@ Sails.load({
         var priceResult     = EmailHelperService.getPriceAfterRebateAndFees(booking);
         var ownerNetIncome  = _.get(priceResult, "ownerNetIncome", 0);
 
-        var isOwner = (booking.ownerId === giver.id);
+        var isOwner = µ.isSameId(booking.ownerId, giver.id);
 
         var text = `Sharinplace: plus que quelques heures pour accepter la réservation de "${listingShortName}"`;
         if (isOwner && ownerNetIncome) {
@@ -1084,7 +1097,7 @@ Sails.load({
             return;
         }
 
-        var isOwner = (booking.ownerId === giver.id);
+        var isOwner = µ.isSameId(booking.ownerId, giver.id);
 
         var conversationUrl = `${appDomain}/inbox/${conversation.id}`;
         var listingShortName   = ToolsService.shrinkString(listing.name, 32, 4);

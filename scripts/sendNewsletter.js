@@ -1,4 +1,4 @@
-/* global BootstrapService, EmailService, User */
+/* global BootstrapService, EmailService */
 
 const Sails      = require('sails');
 const path       = require('path');
@@ -7,6 +7,10 @@ const Handlebars = require('handlebars');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -33,7 +37,7 @@ Sails.load({
         const users = await User.find({
             emailCheck: true,
             newsletter: true,
-            email: { '!': null },
+            email: { $ne: null },
         });
 
         nbNewslettersTotal = users.length;

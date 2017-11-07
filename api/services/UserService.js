@@ -1,4 +1,6 @@
-/* global User */
+const {
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -7,7 +9,7 @@ module.exports = {
 };
 
 /**
- * @param {Number} userId
+ * @param {ObjectId} userId
  * @param {Boolean} [populateMedia = false]
  * @result {Object} res
  * @result {Object} res.user
@@ -15,7 +17,7 @@ module.exports = {
  */
 async function findUser(userId, { populateMedia = false } = {}) {
     const user = await User.findOne({
-        id: userId,
+        _id: userId,
         destroyed: false,
     });
     if (!user) {

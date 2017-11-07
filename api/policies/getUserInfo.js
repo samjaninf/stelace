@@ -1,4 +1,6 @@
-/* global User */
+const {
+    User,
+} = require('../models_new');
 
 module.exports = function (req, res, next) {
 
@@ -11,7 +13,7 @@ module.exports = function (req, res, next) {
             }
 
             return User
-                .findOne({ id: req.user.id })
+                .findById(req.user.id)
                 .then(user => {
                     if (! user) {
                         throw new NotFoundError("user not found");

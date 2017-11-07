@@ -1,4 +1,4 @@
-/* global Assessment, Booking, BootstrapService, EmailTemplateService, Listing, Location, LoggerService, MonitoringService */
+/* global BootstrapService, EmailTemplateService, LoggerService, MonitoringService */
 
 var Sails  = require('sails');
 var moment = require('moment');
@@ -7,6 +7,13 @@ var cronTaskName = "sendMonitoringEmails";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Assessment,
+    Booking,
+    Listing,
+    Location,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -287,7 +294,7 @@ Sails.load({
 
                     return [
                         assessments,
-                        Listing.find({ id: _.pluck(assessments, "listingId") })
+                        Listing.find({ _id: _.pluck(assessments, "listingId") })
                     ];
                 })
                 .spread((assessments, listings) => {
@@ -317,7 +324,7 @@ Sails.load({
             }, []);
 
             return Location
-                .find({ id: locationsIds })
+                .find({ _id: locationsIds })
                 .then(locations => {
                     var indexedLocations = _.indexBy(locations, "id");
 
@@ -334,7 +341,7 @@ Sails.load({
 
         function _populateBookings(bookings) {
             return Listing
-                .find({ id: _.pluck(bookings, "listingId") })
+                .find({ _id: _.pluck(bookings, "listingId") })
                 .then(listings => {
                     var indexedListings = _.indexBy(listings, "id");
 

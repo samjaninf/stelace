@@ -53,123 +53,225 @@ module.exports.routes = {
     ///////////////////////
 
     // AssessmentController
-    'put /api/assessment/:id/sign': "AssessmentController.sign",
+    'get /api/assessment': "AssessmentController.find",
     'get /api/assessment/last': "AssessmentController.last",
+    'get /api/assessment/:id': "AssessmentController.findOne",
+
+    'put /api/assessment/:id': "AssessmentController.update",
+    'put /api/assessment/:id/sign': "AssessmentController.sign",
+
 
     // AuthController
-    'post /api/logout': "AuthController.logout",
-
-    'post /api/auth/local': "AuthController.callback",
-    'post /api/auth/local/:action': "AuthController.callback",
-
-    'post /api/auth/refresh-token': "AuthController.refreshToken",
-    'post /api/auth/loginAs': "AuthController.loginAs",
-
     'get /auth/:provider': "AuthController.provider",
     'get /auth/:provider/callback': "AuthController.callback",
 
+    'post /api/logout': "AuthController.logout",
+    'post /api/auth/local': "AuthController.callback",
+    'post /api/auth/local/:action': "AuthController.callback",
+    'post /api/auth/refresh-token': "AuthController.refreshToken",
+    'post /api/auth/loginAs': "AuthController.loginAs",
     'post /api/auth/basic': "AuthController.basicAuth",
+
 
     // BackofficeController
     'get /api/backoffice/incompleteBookings': "BackofficeController.getIncompleteBookings",
-    'post /api/backoffice/setAction': "BackofficeController.setAction",
     'get /api/backoffice/booking/:id': "BackofficeController.getBooking",
+
+    'post /api/backoffice/setAction': "BackofficeController.setAction",
     'post /api/backoffice/booking/:id/cancel': "BackofficeController.cancelBooking",
+
 
     // BookingController
     'get /api/booking/my': "BookingController.my",
+    'get /api/booking/:id': "BookingController.findOne",
+    'get /api/booking/:id/payment-secure': "BookingController.paymentSecure",
+    'get /api/booking/:id/contract': "BookingController.getContract",
+
+    'post /api/booking': "BookingController.create",
     'post /api/booking/:id/cancel': "BookingController.cancel",
     'post /api/booking/:id/accept': "BookingController.accept",
     'post /api/booking/:id/payment': "BookingController.payment",
-    'get /api/booking/:id/payment-secure': "BookingController.paymentSecure",
     'post /api/booking/:id/contract-token': "BookingController.createContractToken",
-    'get /api/booking/:id/contract': "BookingController.getContract",
+
 
     // BookmarkController
     'get /api/bookmark/my': "BookmarkController.my",
     'get /api/bookmark/:id/destroy': "BookmarkController.destroyLink",
 
+    'post /api/bookmark': "BookmarkController.create",
+
+    'delete /api/bookmark/:id': "BookmarkController.destroy",
+
+
+    // BrandController
+    'get /api/brand': 'BrandController.find',
+    'get /api/brand/:id': 'BrandController.findOne',
+
+    'post /api/brand': 'BrandController.create',
+
+    'put /api/brand/:id': 'BrandController.update',
+
+
     // CardController
     'get /api/card/my': "CardController.my",
+
+    'post /api/card': 'CardController.create',
     'post /api/card/registration': "CardController.createCardRegistration",
+
+    'destroy /api/card/:id': 'CardController.destroy',
+
 
     // ClientLogController
     'post /api/clientLog/error': "ClientLogController.error",
+
 
     // FinanceController
     'post /api/finance/account': "FinanceController.createAccount",
     'post /api/finance/bankAccount': "FinanceController.createBankAccount",
 
+
     // GamificationController
     'get /api/gamification/params': "GamificationController.params",
     'get /api/gamification/stats': "GamificationController.getStats",
+
     'put /api/gamification/progressView': "GamificationController.updateProgressView",
 
-    // ListingController
-    'get /api/listing/query': "ListingController.query",
-    'get /api/listing/my': "ListingController.my",
-    'put /api/listing/:id/medias': "ListingController.updateMedias",
-    'post /api/listing/search': 'ListingController.search',
-    'get /api/listing/:id/locations': "ListingController.getLocations",
-    'get /api/listing/pricing': "ListingController.getPricing",
-    'get /api/listing/price-recommendation': "ListingController.getRecommendedPrices",
-    'post /api/listing/renting-price': "ListingController.getRentingPriceFromSellingPrice",
-    'put /api/listing/:id/pause': "ListingController.pauseListingToggle",
 
     // LinkController
-    'post /api/link/referredBy': "LinkController.createReferredBy",
     'get /api/link/friends': "LinkController.getFriends",
     'get /api/link/referer': "LinkController.getReferer",
+
+    'post /api/link/referredBy': "LinkController.createReferredBy",
     'post /api/link/sendFriendEmails': "LinkController.sendFriendEmails",
 
+
+    // ListingCategoryController
+    'get /api/listingCategory': 'ListingCategoryController.find',
+    'get /api/listingCategory/:id': 'ListingCategoryController.findOne',
+
+    'post /api/listingCategory': 'ListingCategoryController.create',
+
+    'put /api/listingCategory/:id': 'ListingCategoryController.update',
+
+    'delete /api/listingCategory/:id': 'ListingCategoryController.destroy',
+
+
+    // ListingController
+    'get /api/listing': 'ListingController.find',
+    'get /api/listing/query': "ListingController.query",
+    'get /api/listing/my': "ListingController.my",
+    'get /api/listing/pricing': "ListingController.getPricing",
+    'get /api/listing/price-recommendation': "ListingController.getRecommendedPrices",
+    'get /api/listing/:id': 'ListingController.findOne',
+    'get /api/listing/:id/locations': "ListingController.getLocations",
+
+    'post /api/listing': 'ListingController.create',
+    'post /api/listing/search': 'ListingController.search',
+    'post /api/listing/renting-price': "ListingController.getRentingPriceFromSellingPrice",
+
+    'put /api/listing/:id': 'ListingController.update',
+    'put /api/listing/:id/medias': "ListingController.updateMedias",
+    'put /api/listing/:id/pause': "ListingController.pauseListingToggle",
+
+    'delete /api/listing/:id': 'ListingController.destroy',
+
+
+    // ListingTypeController
+    'get /api/listingType': 'ListingTypeController.find',
+
+
     // LocationController
+    'get /api/location': 'LocationController.find',
     'get /api/location/my': "LocationController.my",
-    'put /api/location/main': "LocationController.updateMain",
     'get /api/location/journeysDuration': "LocationController.getJourneysDuration",
     'get /api/location/getGeoInfo': "LocationController.getGeoInfo",
+    'get /api/location/:id': 'LocationController.findOne',
+
+    'post /api/location': 'LocationController.create',
+
+    'put /api/location/main': "LocationController.updateMain",
+    'put /api/location/:id': 'LocationController.update',
+
+    'delete /api/location/:id': 'LocationController.destroy',
+
 
     // MediaController
+    'get /api/media/my': "MediaController.my",
+    'get /api/media/download': "MediaController.download",
     'get /api/media/get/:id/:uuid.:ext': "MediaController.get",
     'get /api/media/get/:id/:uuid': "MediaController.getOld",
-    'get /api/media/download': "MediaController.download",
+
     'post /api/media/upload': "MediaController.upload",
-    'get /api/media/my': "MediaController.my",
+
+    'put /api/media/:id': 'MediaController.update',
+
 
     // MessageController   // mix conversations and messages
     'get /api/message/conversation': "MessageController.conversation",
     'get /api/message/conversation-meta': "MessageController.conversationMeta",
     'get /api/message/get-conversations': "MessageController.getConversations",
     'get /api/message/listing': "MessageController.getPublicMessages",
+
+    'post /api/message': 'MessageController.create',
+
     'put /api/message/:id/mark-read': "MessageController.markAsRead",
     'put /api/message/:id/update-meta': "MessageController.updateMeta",
+
+
+    // RatingController
+    'get /api/rating': 'RatingController.find',
+
+    'post /api/rating': 'RatingController.create',
+
+    'put /api/rating/:id': 'RatingController.update',
+
 
     // SmsController
     'post /api/phone/sendCode': "SmsController.sendVerify",
     'post /api/phone/checkCode': "SmsController.checkVerify",
 
+
     // StelaceConfigController
     'put /api/stelace/config': "StelaceConfigController.update",
 
+
     // StelaceEventController
+    'get /api/stelace/event/:id': 'StelaceEventController.findOne',
+
     'post /api/stelace/event': "StelaceEventController.createEvent",
+
     'put /api/stelace/event/:id': "StelaceEventController.updateEvent",
 
+
+    // TagController
+    'get /api/tag': 'TagController.find',
+
+    'post /api/tag': 'TagController.create',
+
+    'delete /api/tag/:id': 'TagController.destroy',
+
+
     // UserController
+    'get /api/user': 'UserController.find',
     'get /api/user/params': "UserController.params",
     "get /api/user/me": "UserController.me",
     "get /api/user/getAuthMeans": "UserController.getAuthMeans",
+    'get /api/user/income-report': "UserController.getIncomeReport",
+    'get /api/user/:id': 'UserController.findOne',
+    'get /api/user/:id/income-report/:year': "UserController.getIncomeReportPdf",
+
+    'post /api/user/lost-password': "UserController.lostPassword",
+    'post /api/user/emailNew': "UserController.emailNew",
+    'post /api/user/freeFees': "UserController.applyFreeFees",
+
+    'put /api/user/recovery-password': "UserController.recoveryPassword",
+    'put /api/user/emailCheck': "UserController.emailCheck",
+    'put /api/user/:id': 'UserController.update',
     'put /api/user/:id/password': "UserController.updatePassword",
     'put /api/user/:id/email': "UserController.updateEmail",
     'put /api/user/:id/address': "UserController.updateAddress",
     'put /api/user/:id/phone': "UserController.updatePhone",
-    'post /api/user/lost-password': "UserController.lostPassword",
-    'put /api/user/recovery-password': "UserController.recoveryPassword",
-    'put /api/user/emailCheck': "UserController.emailCheck",
-    'post /api/user/emailNew': "UserController.emailNew",
     'put /api/user/:id/media': "UserController.updateMedia",
-    'post /api/user/freeFees': "UserController.applyFreeFees",
-    'get /api/user/income-report': "UserController.getIncomeReport",
-    'get /api/user/:id/income-report/:year': "UserController.getIncomeReportPdf",
 
 
 

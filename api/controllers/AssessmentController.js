@@ -1,4 +1,8 @@
-/* global Assessment, AssessmentService */
+/* global AssessmentService */
+
+const {
+    Assessment,
+} = require('../models_new');
 
 /**
  * AssessmentController
@@ -11,9 +15,7 @@ module.exports = {
 
     find: find,
     findOne: findOne,
-    create: create,
     update: update,
-    destroy: destroy,
 
     sign: sign,
     last: last
@@ -43,7 +45,7 @@ async function findOne(req, res) {
     let access = 'others';
 
     try {
-        const assessment = await Assessment.findOne({ id });
+        const assessment = await Assessment.findById(id);
         if (! assessment) {
             throw new NotFoundError();
         }
@@ -58,10 +60,6 @@ async function findOne(req, res) {
     }
 }
 
-function create(req, res) {
-    return res.forbidden();
-}
-
 async function update(req, res) {
     const id = req.param('id');
     const attrs = req.allParams();
@@ -74,10 +72,6 @@ async function update(req, res) {
     } catch (err) {
         res.sendError(err);
     }
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }
 
 async function sign(req, res) {

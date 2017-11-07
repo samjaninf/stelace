@@ -1,4 +1,4 @@
-/* global BootstrapService, Listing, LoggerService, ListingService */
+/* global BootstrapService, LoggerService, ListingService */
 
 const Sails  = require('sails');
 const moment = require('moment');
@@ -7,6 +7,10 @@ const cronTaskName = "listingPause";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Listing,
+} = require('../api/models_new');
 
 Sails.load({
     models: {

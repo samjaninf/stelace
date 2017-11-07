@@ -1,9 +1,14 @@
-/* global BootstrapService, EmailService, EmailHelperService, TokenService, Transaction, User */
+/* global BootstrapService, EmailService, EmailHelperService, TokenService */
 
 var Sails = require('sails');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Transaction,
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -28,8 +33,8 @@ Sails.load({
     return Promise.coroutine(function* () {
         var ownersIds = yield getOwnersIds(reportYear);
         var owners    = yield User.find({
-            id: ownersIds,
-            email: { '!': null }
+            _id: ownersIds,
+            email: { $ne: null },
         });
 
         yield Promise.each(owners, owner => {
@@ -68,8 +73,8 @@ Sails.load({
             var maxDate = `${reportYear + 1}${firstDateSuffix}`;
 
             var period = {
-                '<': maxDate,
-                '>=': minDate
+                $lt: maxDate,
+                $gte: minDate
             };
 
             var transactions = yield Transaction.find({

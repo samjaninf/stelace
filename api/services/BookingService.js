@@ -1,6 +1,13 @@
 /*
-    global Booking, ContractService, Listing, ListingTypeService, ModelSnapshot, PricingService, User
+    global ContractService, ListingTypeService, PricingService
  */
+
+const {
+    Booking,
+    Listing,
+    ModelSnapshot,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -14,10 +21,10 @@ var moment = require('moment');
 /**
  * Create booking based on user input
  * @param  {Object} user
- * @param  {Number} listingId
+ * @param  {ObjectId} listingId
  * @param  {String} [startDate]
  * @param  {Number} [nbTimeUnits]
- * @param  {Number} listingTypeId
+ * @param  {ObjectId} listingTypeId
  * @param  {Number} [quantity = 1]
  * @return {Object}
  */
@@ -29,9 +36,7 @@ async function createBooking({
     listingTypeId,
     quantity = 1,
 }) {
-    if (! listingId
-        || !listingTypeId
-    ) {
+    if (! listingId || !listingTypeId) {
         throw new BadRequestError();
     }
 
@@ -41,7 +46,7 @@ async function createBooking({
         listing,
         listingTypes,
     ] = await Promise.all([
-        Listing.findOne({ id: listingId }),
+        Listing.findById(listingId),
         ListingTypeService.getListingTypes(),
     ]);
 
@@ -55,7 +60,7 @@ async function createBooking({
         listingTypeId,
     });
 
-    const listingType = _.find(listingTypes, type => type.id === listingTypeId);
+    const listingType = _.find(listingTypes, type => µ.isSameId(type.id, listingTypeId));
     if (!listingType) {
         throw new NotFoundError();
     }
@@ -110,13 +115,13 @@ function checkBasic({
     user,
     listingTypeId,
 }) {
-    if (listing.ownerId === user.id) {
+    if (µ.isSameId(listing.ownerId, user.id)) {
         throw new ForbiddenError("owner cannot book its own listing");
     }
     if (!listing.listingTypesIds.length) {
         throw new Error('listing has no listing types');
     }
-    if (!listingTypeId || !_.includes(listing.listingTypesIds, listingTypeId)) {
+    if (!listingTypeId || !µ.includesObjectId(listing.listingTypesIds, listingTypeId)) {
         throw new BadRequestError('incorrect listing type');
     }
     if (!listing.quantity) {
@@ -233,7 +238,7 @@ async function setBookingPrices({
     quantity,
     now,
 }) {
-    const owner = await User.findOne({ id: listing.ownerId });
+    const owner = await User.findById(listing.ownerId);
     if (!owner) {
         throw new NotFoundError('Owner not found');
     }
@@ -361,25 +366,25 @@ function getAvailabilityPeriods(futureBookings, { newBooking, maxQuantity } = {}
 
     _.forEach(futureBookings, booking => {
         dateSteps.push({
-            date: booking.startDate,
+            date: booking.startDate.toISOString(),
             delta: booking.quantity,
         });
 
         dateSteps.push({
-            date: booking.endDate,
+            date: booking.endDate.toISOString(),
             delta: -booking.quantity,
         });
     });
 
     if (newBooking) {
         dateSteps.push({
-            date: newBooking.startDate,
+            date: newBooking.startDate.toISOString(),
             delta: newBooking.quantity,
             newPeriod: 'start',
         });
 
         dateSteps.push({
-            date: newBooking.endDate,
+            date: newBooking.endDate.toISOString(),
             delta: -newBooking.quantity,
             newPeriod: 'end',
         });

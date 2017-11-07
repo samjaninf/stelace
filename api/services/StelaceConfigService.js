@@ -1,4 +1,6 @@
-/* global StelaceConfig */
+const {
+    StelaceConfig,
+} = require('../models_new');
 
 module.exports = {
 
@@ -88,7 +90,7 @@ async function _fetchConfig() {
         throw new Error('No Stelace config available');
     }
 
-    const stelaceConfig = stelaceConfigs[0];
+    const stelaceConfig = stelaceConfigs[0].toJSON();
     _updateCache(stelaceConfig);
     cached = true;
 }
@@ -145,7 +147,7 @@ async function updateConfig(updatedConfig) {
         config: newConfig,
     };
 
-    const stelaceConfig = await StelaceConfig.updateOne(stelaceConfigId, updateAttrs);
+    const stelaceConfig = await StelaceConfig.findByIdAndUpdate(stelaceConfigId, updateAttrs, { new: true });
     _updateCache(stelaceConfig);
     return config;
 }
@@ -158,7 +160,7 @@ async function updateFeatures(updatedFeatures) {
         features: _.pick(newFeatures, dbFeatureNames),
     };
 
-    const stelaceConfig = await StelaceConfig.updateOne(stelaceConfigId, updateAttrs);
+    const stelaceConfig = await StelaceConfig.findByIdAndUpdate(stelaceConfigId, updateAttrs, { new: true });
     _updateCache(stelaceConfig);
     return features;
 }

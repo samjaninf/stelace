@@ -1,4 +1,8 @@
-/* global ApiService, ListingType */
+/* global ApiService */
+
+const {
+    ListingType,
+} = require('../../models_new');
 
 module.exports = {
 
@@ -18,7 +22,7 @@ async function find(req, res) {
             listingTypes,
             countListingTypes,
         ] = await Promise.all([
-            ListingType.find().paginate(pagination),
+            ListingType.find().skip(pagination.skip).limit(pagination.limit),
             ListingType.count(),
         ]);
 
@@ -39,7 +43,7 @@ async function findOne(req, res) {
     const access = 'self';
 
     try {
-        const listingType = await ListingType.findOne({ id });
+        const listingType = await ListingType.findById(id);
         if (!listingType) {
             throw new NotFoundError();
         }

@@ -1,9 +1,13 @@
-/* global BootstrapService, Media, MediaService */
+/* global BootstrapService, MediaService */
 
 const Sails = require('sails');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Media,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -28,7 +32,7 @@ Sails.load({
     try {
         const medias = await Media.find({
             type: 'img',
-            or: [
+            $or: [
                 { color: null },
                 { placeholder: null },
             ],

@@ -1,4 +1,13 @@
-/* global Assessment, Booking, Conversation, Listing, Link, MathService, PricingService, ToolsService, User */
+/* global MathService, PricingService, ToolsService */
+
+const {
+    Assessment,
+    Booking,
+    Conversation,
+    Listing,
+    Link,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -18,7 +27,7 @@ module.exports = {
  * get uncompleted bookings
  * @param {object} args
  * @param {string} [args.access]
- * @param {Number} [args.listingTypeId]
+ * @param {ObjectId} [args.listingTypeId]
  */
 function getIncompleteBookings(args) {
     args = args || {};
@@ -57,8 +66,8 @@ function getIncompleteBookings(args) {
         }
 
         findAttrs.or = [
-            { paidDate: { '!': null } },
-            { acceptedDate: { '!': null } }
+            { paidDate: { $ne: null } },
+            { acceptedDate: { $ne: null } }
         ];
 
         return Booking.find(findAttrs);
@@ -86,8 +95,8 @@ function getIncompleteBookings(args) {
         var listingsIds = _.pluck(bookings, "listingId");
 
         return Promise.props({
-            users: User.find({ id: usersIds }),
-            listings: Listing.find({ id: listingsIds })
+            users: User.find({ _id: usersIds }),
+            listings: Listing.find({ _id: listingsIds })
         });
     }
 
@@ -122,7 +131,7 @@ function getIncompleteBookings(args) {
  * @param  {string}   [args.toDate]
  * @param  {boolean}  [args.cancelled = false]
  * @param  {boolean}  [args.accepted]
- * @param  {Number}   [args.listingTypeId]
+ * @param  {ObjectId}   [args.listingTypeId]
  */
 function getPaidBookings(args) {
     args = args || {};
@@ -153,13 +162,13 @@ function getPaidBookings(args) {
             }
 
             if (! periodAttrs) {
-                findAttrs.paidDate = { '!': null };
+                findAttrs.paidDate = { $ne: null };
             }
             if (args.accepted) {
-                findAttrs.acceptedDate = { '!': null };
+                findAttrs.acceptedDate = { $ne: null };
             }
             if (args.cancelled) {
-                findAttrs.cancellationId = { '!': null };
+                findAttrs.cancellationId = { $ne: null };
             }
 
             return Booking.find(findAttrs);
@@ -242,7 +251,7 @@ function getAssessmentsDueDates(assessments, logger) {
 
             return [
                 assessments,
-                Booking.find({ id: bookingsIds })
+                Booking.find({ _id: bookingsIds })
             ];
         })
         .spread((assessments, bookings) => {
@@ -359,8 +368,8 @@ function getRevenue(args) {
         .then(() => {
             return Booking.find({
                 cancellationId: null,
-                paidDate: { '!': null },
-                acceptedDate: { '!': null }
+                paidDate: { $ne: null },
+                acceptedDate: { $ne: null }
             });
         })
         .then(bookings => {

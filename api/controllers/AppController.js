@@ -1,4 +1,4 @@
-/* global Listing, SeoSnapshotService, StelaceConfigService, StelaceEventService, Tag, Token, TokenService, ToolsService, UAService, User */
+/* global SeoSnapshotService, StelaceConfigService, StelaceEventService, TokenService, ToolsService, UAService */
 
 /**
  * AppController
@@ -7,6 +7,13 @@
  * @help        :: See http://links.sailsjs.org/docs/controllers
  */
 
+const {
+    Listing,
+    Tag,
+    Token,
+    User,
+} = require('../models_new');
+
 module.exports = {
 
     index: index,
@@ -14,9 +21,9 @@ module.exports = {
 
 };
 
-var Url         = require('url');
-var querystring = require('querystring');
-var UrlPattern  = require('url-pattern');
+const Url         = require('url');
+const querystring = require('querystring');
+const UrlPattern  = require('url-pattern');
 
 var SeoSnapshot = SeoSnapshotService.init({
     snapshotsDirPath: sails.config.snapshotsDir,
@@ -139,7 +146,7 @@ function index(req, res) {
             });
 
             token = _.find(tokens, token => {
-                return token.reference && token.reference.listingId === listingId;
+                return token.reference && µ.isSameId(token.reference.listingId, listingId);
             });
         } else {
             token = await Token.findOne({
@@ -152,14 +159,14 @@ function index(req, res) {
             return;
         }
 
-        const isExpiredToken = token.expirationDate && token.expirationDate < new Date().toISOString();
+        const isExpiredToken = token.expirationDate && token.expirationDate < new Date();
 
         // stop if token has expired
         if (isExpiredToken) {
             return;
         }
 
-        const user = await User.findOne({ id: token.userId });
+        const user = await User.findById(token.userId);
         if (!user) {
             return;
         }
@@ -355,8 +362,8 @@ function index(req, res) {
                 {
                     pattern: "/user/:id",
                     resolve: tokens => {
-                        var userId = parseInt(tokens.id, 10);
-                        if (isNaN(userId)) {
+                        const userId = tokens.id;
+                        if (!µ.isMongoId(userId)) {
                             return;
                         } else {
                             return `/user/${userId}`;
@@ -367,13 +374,12 @@ function index(req, res) {
                     pattern: "/listing/:slug",
                     resolve: tokens => {
                         var slugId = _.last(tokens.slug.split("-"));
-                        slugId = parseInt(slugId, 10);
-                        if (! slugId || isNaN(slugId)) {
+                        if (! slugId || !µ.isMongoId(slugId)) {
                             return;
                         }
 
                         return Promise.coroutine(function* () {
-                            var listing = yield Listing.findOne({ id: slugId });
+                            var listing = yield Listing.findById(slugId);
                             if (! listing) {
                                 return;
                             } else {
@@ -386,9 +392,8 @@ function index(req, res) {
                     pattern: "/friend/:slug",
                     resolve: tokens => {
                         var slugId = _.last(tokens.slug.split("-"));
-                        slugId = parseInt(slugId, 10);
 
-                        if (! slugId || isNaN(slugId)) {
+                        if (! slugId || !µ.isMongoId(slugId)) {
                             return;
                         } else {
                             return `/friend/${slugId}`;

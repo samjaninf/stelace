@@ -1,4 +1,10 @@
-/* global Listing, Media, MediaService, User */
+/* global MediaService */
+
+const {
+    Listing,
+    Media,
+    User,
+} = require('../models_new');
 
 /**
  * MediaController
@@ -11,11 +17,7 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
-    create: create,
     update: update,
-    destroy: destroy,
 
     my: my,
     get: get,
@@ -48,18 +50,6 @@ var logoBreakpoints = {
 var mediaMinSizeForLogo = { width: 600, height: 240 };
 var logoMargin          = { bottom: 10, right: 20 };
 
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
 async function update(req, res) {
     var id = req.param("id");
     var name = req.param("name");
@@ -71,23 +61,19 @@ async function update(req, res) {
     }
 
     try {
-        let media = await Media.findOne({ id });
+        let media = await Media.findById(id);
         if (!media) {
             throw new NotFoundError();
         }
-        if (media.userId !== req.user.id) {
+        if (!µ.isSameId(media.userId, req.user.id)) {
             throw new ForbiddenError();
         }
 
-        media = await Media.updateOne(media.id, { name });
+        media = await Media.findByIdAndUpdate(media.id, { name }, { new: true });
         res.json(Media.expose(media, access));
     } catch (err) {
         res.sendError(err);
     }
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }
 
 function get(req, res) {
@@ -149,7 +135,7 @@ function get(req, res) {
 
     function findMedia(id, uuid) {
         return Media
-            .findOne({ id: id })
+            .findById(id)
             .then(function (media) {
                 if (! media || media.uuid !== uuid) {
                     throw new NotFoundError();
@@ -536,7 +522,7 @@ async function getOld(req, res) {
     } = req.allParams();
 
     try {
-        const media = await Media.findOne({ id, uuid });
+        const media = await Media.findOne({ _id: id, uuid });
         if (!media) {
             throw new NotFoundError();
         }
@@ -576,30 +562,30 @@ async function download(req, res) {
 
 async function upload(req, res) {
     const field    = req.param("field");
-    const targetId = parseInt(req.param("targetId"), 10);
+    const targetId = req.param("targetId");
     const name     = req.param("name");
     const url      = req.param("url");
     const access = "self";
 
     if (!field ||! _.includes(Media.get("fields"), field)
-     || !targetId|| isNaN(targetId)
+     || !targetId|| !µ.isMongoId(targetId)
     ) {
         return res.badRequest();
     }
 
     try {
         if (field === 'user') {
-            if (req.user.id !== targetId) {
+            if (µ.isSameId(req.user.id, targetId)) {
                 throw new ForbiddenError();
             }
         } else if (field === 'listing') {
-            const listing = await Listing.findOne({ id: targetId });
+            const listing = await Listing.findById(targetId);
             if (!listing) {
                 const error = new NotFoundError('Listing not found');
                 error.listingId = targetId;
                 throw error;
             }
-            if (listing.ownerId !== req.user.id) {
+            if (!µ.isSameId(listing.ownerId, req.user.id)) {
                 throw new ForbiddenError();
             }
         }

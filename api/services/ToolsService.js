@@ -188,8 +188,8 @@ function getPeriodAttrs(fromDate, toDate, args) {
     }
 
     var periodAttrs = {};
-    var fromOperator = (exclusiveFromDate ? ">" : ">=");
-    var toOperator   = (exclusiveToDate ? "<" : "<=");
+    var fromOperator = (exclusiveFromDate ? '$gt' : '$gte');
+    var toOperator   = (exclusiveToDate ? '$lt' : '$lte');
 
     if (fromDate) {
         periodAttrs[fromOperator] = fromDate;

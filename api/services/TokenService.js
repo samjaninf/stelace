@@ -1,4 +1,9 @@
-/* global GeneratorService, Token, TokenService, UAService, User */
+/* global GeneratorService, TokenService, UAService */
+
+const {
+    Token,
+    User,
+} = require('../models_new');
 
 module.exports = {
 

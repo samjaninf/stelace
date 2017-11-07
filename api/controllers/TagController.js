@@ -1,4 +1,11 @@
-/* global ElasticsearchService, ListingXTag, Tag, TokenService, User, UserXTag */
+/* global ElasticsearchService, TokenService */
+
+const {
+    ListingXTag,
+    Tag,
+    User,
+    UserXTag,
+} = require('../models_new');
 
 /**
  * TagController
@@ -10,9 +17,7 @@
 module.exports = {
 
     find: find,
-    findOne: findOne,
     create: create,
-    update: update,
     destroy: destroy
 
 };
@@ -35,10 +40,6 @@ function find(req, res) {
             res.json(Tag.exposeAll(tags, access));
         })
         .catch(res.sendError);
-}
-
-function findOne(req, res) {
-    return res.forbidden();
 }
 
 function create(req, res) {
@@ -71,13 +72,9 @@ function create(req, res) {
         .catch(res.sendError);
 }
 
-function update(req, res) {
-    return res.forbidden();
-}
-
 function destroy(req, res) {
     var isAdmin = TokenService.isRole(req, "admin");
-    var tagId   = parseInt(req.param("id"), 10);
+    var tagId   = req.param("id");
     var tagUsersIds;
     var tagUsers;
 
@@ -88,9 +85,7 @@ function destroy(req, res) {
     }
 
     return Promise.coroutine(function* () {
-        var tag = yield Tag.findOne({
-            id: tagId
-        });
+        var tag = yield Tag.findById(tagId);
 
         if (! tag) {
             return res.notFound();
@@ -102,24 +97,24 @@ function destroy(req, res) {
         });
 
         tagUsersIds  = _.pluck(tagUse.userTags, "userId");
-        tagUsers     = yield User.find({ id: tagUsersIds });
+        tagUsers     = yield User.find({ _id: tagUsersIds });
         var updates  = [];
 
         _.forEach(tagUsers, function (user) {
-            if (! _.includes(user.tagsIds, tagId)) {
+            if (!µ.includesObjectId(user.tagsIds, tagId)) {
                 return; // sanity check
             }
-            var updatedTagsIds = _.reject(user.tagsIds, id => id === tagId);
+            var updatedTagsIds = _.reject(user.tagsIds, id => µ.isSameId(id, tagId));
 
-            updates.push(User.updateOne(user.id, { tagsIds: updatedTagsIds }));
+            updates.push(User.findByIdAndUpdate(user.id, { tagsIds: updatedTagsIds }, { new: true }));
         });
 
         yield Promise.all(updates);
 
         yield Promise.all([
-            Tag.destroy({ id: tagId }),
-            UserXTag.destroy({ tagId: tagId }),
-            ListingXTag.destroy({ tagId: tagId })
+            Tag.remove({ _id: tagId }),
+            UserXTag.remove({ tagId: tagId }),
+            ListingXTag.remove({ tagId: tagId })
         ]);
 
         var listingsIds = _.pluck(tagUse.listingTags, "listingId");

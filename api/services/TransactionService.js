@@ -1,4 +1,9 @@
-/* global BookingTransactionService, TimeService, Transaction, TransactionDetail */
+/* global BookingTransactionService, TimeService */
+
+const {
+    Transaction,
+    TransactionDetail,
+} = require('../models_new');
 
 module.exports = {
 

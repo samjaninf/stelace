@@ -58,7 +58,7 @@
             if ($stateParams.slug) {
                 var slugId = _.last($stateParams.slug.split("-"));
 
-                if (slugId && ! isNaN(slugId)) {
+                if (slugId && tools.isObjectId(slugId)) {
                     referrerId = slugId;
                     canonicalUrl = platform.getBaseUrl() + $state.current.urlWithoutParams + "/" + referrerId;
                 } else {

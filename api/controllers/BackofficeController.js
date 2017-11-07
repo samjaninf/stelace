@@ -1,7 +1,13 @@
 /* global
-    Booking, CancellationService, GamificationService, Listing, MonitoringService, TokenService,
-    TransactionService, User
+    CancellationService, GamificationService, MonitoringService, TokenService,
+    TransactionService
 */
+
+const {
+    Booking,
+    Listing,
+    User,
+} = require('../models_new');
 
 /**
  * BackofficeController
@@ -12,12 +18,6 @@
 
 module.exports = {
 
-    findOne: findOne,
-    find: find,
-    create: create,
-    update: update,
-    destroy: destroy,
-
     getIncompleteBookings: getIncompleteBookings,
     setAction: setAction,
     getBooking: getBooking,
@@ -25,36 +25,12 @@ module.exports = {
 
 };
 
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
-}
-
 async function getIncompleteBookings(req, res) {
     let listingTypeId = req.param('listingTypeId');
     var access = "self";
 
     if (! TokenService.isRole(req, "admin")) {
         return res.forbidden();
-    }
-
-    if (listingTypeId) {
-        listingTypeId = parseInt(listingTypeId, 10);
     }
 
     try {
@@ -77,15 +53,12 @@ function setAction(req, res) {
     }
 
     if (! actionId
-     || ! µ.checkArray(usersIds, "id")
+     || ! µ.checkArray(usersIds, "mongoId")
     ) {
         return res.badRequest();
     }
 
-    usersIds = _(usersIds)
-        .map(userId => parseInt(userId, 10))
-        .uniq()
-        .value();
+    usersIds = _.uniq(usersIds);
 
     return Promise
         .resolve()
@@ -95,7 +68,7 @@ function setAction(req, res) {
                 throw new BadRequestError("Gamification action doesn't exist.");
             }
 
-            return User.find({ id: usersIds });
+            return User.find({ _id: usersIds });
         })
         .then(users => {
             var indexedUsers = _.indexBy(users, "id");
@@ -139,7 +112,7 @@ function getBooking(req, res) {
     }
 
     return Promise.coroutine(function* () {
-        var booking = yield Booking.findOne({ id: id });
+        var booking = yield Booking.findById(id);
         if (! booking) {
             throw new NotFoundError();
         }
@@ -147,8 +120,8 @@ function getBooking(req, res) {
         var usersIds = [booking.ownerId, booking.takerId];
 
         var result = yield Promise.props({
-            users: User.find({ id: usersIds }),
-            listing: Listing.findOne({ id: booking.listingId }),
+            users: User.find({ _id: usersIds }),
+            listing: Listing.findOne({ _id: booking.listingId }),
             hashAssessments: Booking.getAssessments([booking])
         });
 
@@ -180,7 +153,7 @@ function cancelBooking(req, res) {
     var access = "self";
 
     return Promise.coroutine(function* () {
-        var booking = yield Booking.findOne({ id: id });
+        var booking = yield Booking.findById(id);
         if (! booking) {
             throw new NotFoundError();
         }

@@ -1,4 +1,9 @@
-/* global Booking, MathService, mangopay, PricingService, Transaction, TransactionService */
+/* global MathService, mangopay, PricingService, TransactionService */
+
+const {
+    Booking,
+    Transaction,
+} = require('../models_new');
 
 module.exports = {
 
@@ -65,7 +70,7 @@ function getPreviousRenewDeposit(transactionManager) {
     }
 
     return _.last(_.filter(renewDeposits, renewDeposit => {
-        return renewDeposit.id !== lastRenewDeposit.id;
+        return !µ.isSameId(renewDeposit.id, lastRenewDeposit.id);
     }));
 }
 
@@ -270,7 +275,7 @@ function stopRenewDepositIfFailed(newPreauth, booking) {
         var error = new Error("Preauthorization fail");
         error.preauthorization = newPreauth;
 
-        yield Booking.updateOne(booking.id, { stopRenewDeposit: true })
+        yield Booking.findByIdAndUpdate(booking.id, { stopRenewDeposit: true }, { new: true })
             .then(() => { throw error; })
             .catch(() => { throw error; });
     })();
@@ -354,7 +359,7 @@ function cancelDeposit(booking, transactionManager) {
         });
 
         return yield Booking
-            .updateOne(booking.id, { cancellationDepositDate: moment().toISOString() })
+            .findByIdAndUpdate(booking.id, { cancellationDepositDate: moment().toISOString() }, { new: true })
             .catch(() => booking);
     })();
 }
@@ -381,7 +386,7 @@ function cancelPreauthPayment(booking, transactionManager) {
         }
 
         return yield Booking
-            .updateOne(booking.id, { cancellationPaymentDate: moment().toISOString() })
+            .findByIdAndUpdate(booking.id, { cancellationPaymentDate: moment().toISOString() }, { new: true })
             .catch(() => booking);
     })();
 }
@@ -436,7 +441,7 @@ function payinPayment(booking, transactionManager, taker, paymentValues) {
         }
 
         return yield Booking
-            .updateOne(booking.id, { paymentUsedDate: moment().toISOString() })
+            .findByIdAndUpdate(booking.id, { paymentUsedDate: moment().toISOString() }, { new: true })
             .catch(() => booking);
     })();
 }
@@ -549,7 +554,7 @@ function transferPayment(booking, transactionManager, taker, owner, paymentValue
         }
 
         return yield Booking
-            .updateOne(booking.id, { paymentTransferDate: moment().toISOString() })
+            .findByIdAndUpdate(booking.id, { paymentTransferDate: moment().toISOString() }, { new: true })
             .catch(() => booking);
     })();
 }
@@ -660,7 +665,7 @@ function payoutPayment(booking, transactionManager, owner, paymentValues) {
         }
 
         return yield Booking
-            .updateOne(booking.id, { withdrawalDate: moment().toISOString() })
+            .findByIdAndUpdate(booking.id, { withdrawalDate: moment().toISOString() }, { new: true })
             .catch(() => booking);
     })();
 }

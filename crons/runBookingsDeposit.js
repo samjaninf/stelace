@@ -1,4 +1,4 @@
-/* global Booking, BookingPaymentService, BootstrapService, Cancellation, LoggerService, TransactionService */
+/* global BookingPaymentService, BootstrapService, LoggerService, TransactionService */
 
 var Sails  = require('sails');
 var moment = require('moment');
@@ -7,6 +7,11 @@ var cronTaskName = "runBookingsDeposit";
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Booking,
+    Cancellation,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -49,7 +54,7 @@ Sails.load({
     return Promise.coroutine(function* () {
         var bookings = yield Booking.find({
             cancellationDepositDate: null,
-            depositDate: { '!': null }
+            depositDate: { $ne: null }
         });
 
         if (! bookings.length) {
@@ -62,7 +67,7 @@ Sails.load({
         var result = yield Promise.props({
             transactionsManagers: TransactionService.getBookingTransactionsManagers(bookingsIds),
             hashAssessments: Booking.getAssessments(bookings),
-            cancellations: Cancellation.find({ id: cancellationsIds })
+            cancellations: Cancellation.find({ _id: cancellationsIds })
         });
 
         var transactionsManagers = result.transactionsManagers;
@@ -87,7 +92,7 @@ Sails.load({
                 ) {
                     ++info.cancel.total;
 
-                    yield Booking.updateOne(booking.id, { releaseDepositDate: now })
+                    yield Booking.findByIdAndUpdate(booking.id, { releaseDepositDate: now }, { new: true })
                         .then(() => {
                             return BookingPaymentService.cancelDeposit(booking, transactionManager);
                         })
@@ -122,7 +127,7 @@ Sails.load({
 
 
     function isReleaseDepositPassed(booking, now) {
-        return booking.releaseDepositDate && booking.releaseDepositDate < now;
+        return booking.releaseDepositDate && booking.releaseDepositDate < new Date(now);
     }
 
     function releaseCancelledBooking(booking, cancellation, releaseDepositLimitDate) {
@@ -143,7 +148,7 @@ Sails.load({
         if (_.includes(reasonTypes, cancellation.reasonType)) {
             releaseDeposit = true;
         } else {
-            releaseDeposit = (cancellation.createdDate < releaseDepositLimitDate);
+            releaseDeposit = (cancellation.createdDate.toISOString() < releaseDepositLimitDate);
         }
 
         return ! booking.releaseDepositDate
@@ -157,7 +162,7 @@ Sails.load({
         // and the output assessment hasn't been signed
         return ! Booking.isNoTime(booking)
          && ! booking.releaseDepositDate
-         && booking.endDate < releaseDepositLimitDate
+         && booking.endDate.toISOString() < releaseDepositLimitDate
          && bookingAssessments.inputAssessment
          && bookingAssessments.inputAssessment.signedDate
          && bookingAssessments.outputAssessment
@@ -176,8 +181,8 @@ Sails.load({
             return false;
         }
 
-        if (mainDeposit.preauthExpirationDate < expirationLimitDate
-         && (! lastRenewDeposit || lastRenewDeposit.preauthExpirationDate < expirationLimitDate)
+        if (mainDeposit.preauthExpirationDate.toISOString() < expirationLimitDate
+         && (! lastRenewDeposit || lastRenewDeposit.preauthExpirationDate.toISOString() < expirationLimitDate)
         ) {
             return true;
         }

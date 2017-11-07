@@ -1,7 +1,16 @@
 /* global
-    Booking, EmailTemplateService, GamificationEvent, Link, Location, Reward,
-    StelaceConfigService, StelaceEventService, UAService, User
+    EmailTemplateService,
+    StelaceConfigService, StelaceEventService, UAService
 */
+
+const {
+    Booking,
+    GamificationEvent,
+    Link,
+    Location,
+    Reward,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -551,7 +560,7 @@ function _setAction(user, actionId, data, userStats, logger, sessionId) {
 
             if (user.points !== userStats.points) {
                 return User
-                    .updateOne(user.id, { points: userStats.points })
+                    .findByIdAndUpdate(user.id, { points: userStats.points }, { new: true })
                     .then(u => {
                         user.points = u.points;
                     });
@@ -659,7 +668,7 @@ function _setLevel(user, levelId, userStats, logger, sessionId) {
                 .then(() => {
                     userStats.levelId = level.id;
 
-                    return User.updateOne(user.id, { levelId: level.id })
+                    return User.findByIdAndUpdate(user.id, { levelId: level.id }, { new: true })
                         .then(u => {
                             user.levelId = u.levelId;
                         });
@@ -747,10 +756,10 @@ function recompute(users) {
                      || user.levelId !== userStats.levelId
                     ) {
                         return User
-                            .updateOne(user.id, {
+                            .findByIdAndUpdate(user.id, {
                                 points: userStats.points,
                                 levelId: userStats.levelId
-                            })
+                            }, { new: true })
                             .then(u => {
                                 user.points  = u.points;
                                 user.levelId = u.levelId;
@@ -904,7 +913,7 @@ function _getLevelsPoints() {
 }
 
 function _getSessionId(req, user) {
-    if (req && req.user && req.user.id === user.id) {
+    if (req && req.user && µ.isSameId(req.user.id, user.id)) {
         return StelaceEventService.getSessionId(req);
     } else {
         return;
@@ -947,7 +956,7 @@ function _getConfig() {
                     }
 
                     return User
-                        .findOne({ id: link.fromUserId })
+                        .findById(link.fromUserId)
                         .then(referer => {
                             if (! referer) {
                                 throw new NotFoundError("Referer not found");
@@ -1070,11 +1079,11 @@ function _getConfig() {
                     return false;
                 }
 
-                return line.reference.friendUserId === link.toUserId;
+                return µ.isSameId(line.reference.friendUserId, link.toUserId);
             });
 
             return ! alreadySet
-                && link.fromUserId === user.id
+                && µ.isSameId(link.fromUserId, user.id)
                 && link.relationship === "refer"
                 && link.validated;
         };
@@ -1091,7 +1100,7 @@ function _getConfig() {
         cf.actions.checks.REGISTER_AS_FRIEND = function (user, data) {
             var link = data.link;
 
-            return link.toUserId === user.id
+            return µ.isSameId(link.toUserId, user.id)
                 && link.relationship === "refer"
                 && link.validated;
         };
@@ -1114,12 +1123,12 @@ function _getConfig() {
                     return false;
                 }
 
-                return line.reference.friendUserId === link.toUserId;
+                return µ.isSameId(line.reference.friendUserId, link.toUserId);
             });
 
             return ! alreadySet
-                && link.fromUserId === user.id
-                && booking.takerId === link.toUserId
+                && µ.isSameId(link.fromUserId, user.id)
+                && µ.isSameId(booking.takerId, link.toUserId)
                 && link.relationship === "refer"
                 && link.validated
                 && booking.paidDate
@@ -1144,7 +1153,7 @@ function _getConfig() {
             return Promise
                 .resolve()
                 .then(() => {
-                    return User.findOne({ id: link.toUserId });
+                    return User.findById(link.toUserId);
                 })
                 .then(friend => {
                     if (! friend) {
@@ -1173,12 +1182,12 @@ function _getConfig() {
                     return false;
                 }
 
-                return line.reference.friendUserId === link.toUserId;
+                return µ.isSameId(line.reference.friendUserId, link.toUserId);
             });
 
             return ! alreadySet
-                && link.fromUserId === user.id
-                && booking.ownerId === link.toUserId
+                && µ.isSameId(link.fromUserId, user.id)
+                && µ.isSameId(booking.ownerId, link.toUserId)
                 && link.relationship === "refer"
                 && link.validated
                 && booking.paidDate
@@ -1203,7 +1212,7 @@ function _getConfig() {
             return Promise
                 .resolve()
                 .then(() => {
-                    return User.findOne({ id: link.toUserId });
+                    return User.findById(link.toUserId);
                 })
                 .then(friend => {
                     if (! friend) {
@@ -1228,7 +1237,7 @@ function _getConfig() {
             var link   = data.link;
 
             var alreadySet = _.find(userStats.actionsDetails.FRIEND_BEGINNER_LEVEL_AS_REFERER, line => {
-                return line.reference && line.reference.friendUserId === friend.id;
+                return line.reference && µ.isSameId(line.reference.friendUserId, friend.id);
             });
 
             var levelsOrder        = getLevelsOrder();
@@ -1236,8 +1245,8 @@ function _getConfig() {
             var friendLevelIndex   = _.indexOf(levelsOrder, friend.levelId);
 
             return ! alreadySet
-                && link.fromUserId === user.id
-                && link.toUserId === friend.id
+                && µ.isSameId(link.fromUserId, user.id)
+                && µ.isSameId(link.toUserId, friend.id)
                 && link.relationship === "refer"
                 && beginnerLevelIndex <= friendLevelIndex;
         };
@@ -1269,7 +1278,7 @@ function _getConfig() {
         cf.actions.checks.FIRST_BOOKING = function (user, data) {
             var booking = data.booking;
 
-            return booking.takerId === user.id
+            return µ.isSameId(booking.takerId, user.id)
                 && (booking.depositDate || booking.paymentDate)
                 && ! booking.cancellationId;
         };
@@ -1285,7 +1294,7 @@ function _getConfig() {
         cf.actions.checks.FIRST_RENTING_OUT = function (user, data) {
             var booking = data.booking;
 
-            return booking.ownerId === user.id
+            return µ.isSameId(booking.ownerId, user.id)
                 && booking.acceptedDate
                 && ! booking.cancellationId;
         };
@@ -1301,7 +1310,7 @@ function _getConfig() {
         cf.actions.checks.FIRST_COMPLETE_BOOKING = function (user, data) {
             var booking = data.booking;
 
-            if (! _.contains([booking.ownerId, booking.takerId], user.id)) {
+            if (! µ.includesObjectId([booking.ownerId, booking.takerId], user.id)) {
                 return false;
             }
 
@@ -1338,7 +1347,7 @@ function _getConfig() {
         cf.actions.checks.FIRST_VALID_LISTING_AD = function (user, data) {
             var listing = data.listing;
 
-            return listing.ownerId === user.id
+            return µ.isSameId(listing.ownerId, user.id)
                 && listing.validated;
         };
 
@@ -1354,11 +1363,11 @@ function _getConfig() {
             var listing = data.listing;
 
             var alreadySet = _.find(userStats.actionsDetails.VALID_LISTING_AD, line => {
-                return line.reference && line.reference.listingId === listing.id;
+                return line.reference && µ.isSameId(line.reference.listingId, listing.id);
             });
 
             return ! alreadySet
-                && listing.ownerId === user.id
+                && µ.isSameId(listing.ownerId, user.id)
                 && listing.validated;
         };
 
@@ -1415,11 +1424,11 @@ function _getConfig() {
             var booking = data.booking;
 
             var alreadySet = _.find(userStats.actionsDetails.COMPLETE_BOOKING, line => {
-                return line.reference && line.reference.bookingId === booking.id;
+                return line.reference && µ.isSameId(line.reference.bookingId, booking.id);
             });
 
             if (alreadySet
-             || ! _.contains([booking.ownerId, booking.takerId], user.id)
+             || !µ.includesObjectId([booking.ownerId, booking.takerId], user.id)
             ) {
                 return false;
             }

@@ -1,4 +1,4 @@
-/* global BootstrapService, GamificationService, LoggerService, User */
+/* global BootstrapService, GamificationService, LoggerService */
 
 var Sails = require('sails');
 var yargs = require('yargs');
@@ -6,8 +6,12 @@ var yargs = require('yargs');
 global._       = require('lodash');
 global.Promise = require('bluebird');
 
+const {
+    User,
+} = require('../api/models_new');
+
 var argv = yargs
-            .usage("Usage: $0 --actionId [string] --usersIds [num[]]")
+            .usage("Usage: $0 --actionId [string] --usersIds [ObjectId[]]")
             .demand("actionId")
             .demand("usersIds")
             .argv;
@@ -23,17 +27,8 @@ if (typeof argv.actionId !== "string") {
 try {
     usersIds = JSON.parse(argv.usersIds);
 
-    var isValid = function () {
-        return _.reduce(usersIds, (memo, userId) => {
-            if (typeof userId !== "number") {
-                memo = memo && false;
-            }
-            return memo;
-        }, true);
-    };
-
-    if (! _.isArray(usersIds) || ! isValid()) {
-        console.log("usersIds must be an array of numbers.");
+    if (! _.isArray(usersIds) || ! µ.checkArray(usersIds, 'mongoId')) {
+        console.log("usersIds must be an array of ObjectId.");
         process.exit();
     }
 } catch (e) {
@@ -69,7 +64,7 @@ Sails.load({
                 throw new Error("Gamification action doesn't exist.");
             }
 
-            return User.find({ id: usersIds });
+            return User.find({ _id: usersIds });
         })
         .then(users => {
             var indexedUsers = _.indexBy(users, "id");

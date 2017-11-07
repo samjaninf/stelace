@@ -1,4 +1,9 @@
-/* global Brand, ListingCategory, TokenService */
+/* global TokenService */
+
+const {
+    Brand,
+    ListingCategory,
+} = require('../models_new');
 
 /**
  * ListingCategoryController
@@ -33,7 +38,7 @@ function findOne(req, res) {
     var access = "others";
 
     return ListingCategory
-        .findOne({ id: id })
+        .findById(id)
         .then(listingCategory => {
             if (! listingCategory) {
                 throw new NotFoundError();
@@ -58,7 +63,7 @@ function create(req, res) {
         .then(() => {
             return [
                 ListingCategory.findOne({ name: name }),
-                parentId ? ListingCategory.findOne({ id: parentId }) : null
+                parentId ? ListingCategory.findById(parentId) : null
             ];
         })
         .spread((listingCategory, parentCategory) => {
@@ -99,7 +104,7 @@ function update(req, res) {
     };
 
     return ListingCategory
-        .updateOne(id, updateAttrs)
+        .findByIdAndUpdate(id, updateAttrs, { new: true })
         .then(listingCategory => {
             res.json(ListingCategory.expose(listingCategory, access));
         })
@@ -125,22 +130,20 @@ function destroy(req, res) {
         .then(() => {
             return ListingCategory.removeListingCategory(id);
         })
-        .then(() => res.json({ id: id }))
+        .then(() => res.json({ id }))
         .catch(res.sendError);
 
 
 
     function removeListingCategoryFromBrands(id, brands) {
-        id = parseInt(id, 10);
-
         return Promise
             .resolve(brands)
             .each(brand => {
-                if (! brand.listingCategories || ! _.contains(brand.listingCategories, id)) {
+                if (! brand.listingCategories || !µ.includesObjectId(brand.listingCategories, id)) {
                     return;
                 }
 
-                return Brand.updateOne(brand.id, { listingCategories: _.without(brand.listingCategories, id) });
+                return Brand.findByIdAndUpdate(brand.id, { listingCategories: _.without(brand.listingCategories, id) }, { new: true });
             });
     }
 }

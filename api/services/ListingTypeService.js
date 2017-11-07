@@ -1,4 +1,8 @@
-/* global ListingType, StelaceConfigService */
+/* global StelaceConfigService */
+
+const {
+    ListingType,
+} = require('../models_new');
 
 module.exports = {
 
@@ -26,7 +30,7 @@ function _constructFromDefault(types) {
     const defaultProperties = StelaceConfigService.getDefaultListingTypeProperties();
 
     return _.reduce(types, (memo, type) => {
-        const newType = _.assign({}, type);
+        const newType = _.assign({}, type.toJSON());
         newType.properties = _.defaults({}, type.properties, defaultProperties);
         memo.push(newType);
         return memo;
@@ -53,7 +57,7 @@ async function getListingTypes() {
 
 async function getListingType(listingTypeId) {
     await _fetchTypes();
-    return _.find(listingTypes, listingType => listingType.id === listingTypeId);
+    return _.find(listingTypes, listingType => µ.isSameId(listingType.id, listingTypeId));
 }
 
 async function isValidListingTypesIds(listingTypesIds) {

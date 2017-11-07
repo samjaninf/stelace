@@ -1,9 +1,24 @@
 /* global
-    Assessment, AssessmentService, Booking, BookingService, BookingGamificationService,
-    Cancellation, CancellationService, Card, ContractService, Conversation,
-    EmailTemplateService, FileCachingService, GeneratorService, Listing, Location, Message, mangopay,
-    ModelSnapshot, PaymentError, SmsTemplateService, StelaceEventService, Token, TransactionService, User
+    AssessmentService, BookingService, BookingGamificationService,
+    CancellationService, ContractService,
+    EmailTemplateService, FileCachingService, GeneratorService, mangopay,
+    SmsTemplateService, StelaceEventService, TransactionService
 */
+
+const {
+    Assessment,
+    Booking,
+    Cancellation,
+    Card,
+    Conversation,
+    Listing,
+    Location,
+    Message,
+    ModelSnapshot,
+    PaymentError,
+    Token,
+    User,
+} = require('../models_new');
 
 /**
  * BookingController
@@ -14,11 +29,8 @@
 
 module.exports = {
 
-    find: find,
     findOne: findOne,
     create: create,
-    update: update,
-    destroy: destroy,
 
     my: my,
     accept: accept,
@@ -55,23 +67,19 @@ function initMessageCache() {
     })();
 }
 
-function find(req, res) {
-    return res.forbidden();
-}
-
 function findOne(req, res) {
     var id = req.param("id");
     var access;
 
     return Promise.coroutine(function* () {
-        var booking = yield Booking.findOne({ id: id });
+        var booking = yield Booking.findById(id);
         if (! booking) {
             throw new NotFoundError();
         }
 
         var result = yield Promise.props({
             listingSnapshot: ModelSnapshot.fetch(booking.listingSnapshotId),
-            cancellation: booking.cancellationId ? Cancellation.findOne({ id: booking.cancellationId }) : null
+            cancellation: booking.cancellationId ? Cancellation.findById(booking.cancellationId) : null
         });
 
         var listingSnapshot = result.listingSnapshot;
@@ -83,9 +91,9 @@ function findOne(req, res) {
             throw new NotFoundError();
         }
 
-        if (booking.ownerId === req.user.id) {
+        if (µ.isSameId(booking.ownerId, req.user.id)) {
             access = "owner";
-        } else if (booking.takerId === req.user.id) {
+        } else if (µ.isSameId(booking.takerId, req.user.id)) {
             access = "self";
         }
 
@@ -106,9 +114,6 @@ async function create(req, res) {
 
     attrs.user = req.user;
 
-    if (typeof attrs.listingId !== 'undefined') {
-        attrs.listingId = parseInt(attrs.listingId, 10);
-    }
     if (typeof attrs.nbTimeUnits !== 'undefined') {
         attrs.nbTimeUnits = parseInt(attrs.nbTimeUnits, 10);
     }
@@ -122,14 +127,6 @@ async function create(req, res) {
     } catch (err) {
         res.sendError(err);
     }
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }
 
 function my(req, res) {
@@ -174,12 +171,12 @@ async function accept(req, res) {
     const now = moment().toISOString();
 
     try {
-        let booking = await Booking.findOne({ id });
+        let booking = await Booking.findById(id);
         if (!booking) {
             throw new NotFoundError();
         }
         // the booking cannot be accepted by the current user
-        if (Booking.getAgreementUserId(booking) !== req.user.id) {
+        if (!µ.isSameId(Booking.getAgreementUserId(booking), req.user.id)) {
             throw new ForbiddenError();
         }
         // booking cancelled or already accepted
@@ -233,7 +230,8 @@ async function accept(req, res) {
             await Message.createMessage(booking.ownerId, giverMessage, { logger: req.logger });
         }
 
-        booking = await Booking.updateOne(booking.id, { acceptedDate: now });
+        booking.acceptedDate = now;
+        booking = await booking.save();
 
         await StelaceEventService.createEvent({
             req: req,
@@ -273,14 +271,14 @@ function cancel(req, res) {
     }
 
     return Promise.coroutine(function* () {
-        var booking = yield Booking.findOne({ id: id });
+        var booking = yield Booking.findById(id);
         if (! booking) {
             throw new NotFoundError();
         }
         if (booking.cancellationId) {
             throw new BadRequestError("booking already cancelled");
         }
-        if ((req.user.id === booking.ownerId && reasonType !== "rejected")) {
+        if ((µ.isSameId(req.user.id, booking.ownerId) && reasonType !== "rejected")) {
             throw new BadRequestError();
         }
 
@@ -289,9 +287,9 @@ function cancel(req, res) {
         }
 
         var trigger;
-        if (req.user.id === booking.takerId) {
+        if (µ.isSameId(req.user.id, booking.takerId)) {
             trigger = "taker";
-        } else if (req.user.id === booking.ownerId) {
+        } else if (µ.isSameId(req.user.id, booking.ownerId)) {
             trigger = "owner";
         }
 
@@ -312,9 +310,9 @@ function cancel(req, res) {
 
         yield Booking.updateListingQuantity(booking, { actionType: 'add' });
 
-        if (req.user.id === booking.takerId) {
+        if (µ.isSameId(req.user.id, booking.takerId)) {
             access = "self";
-        } else if (req.user.id === booking.ownerId) {
+        } else if (µ.isSameId(req.user.id, booking.ownerId)) {
             access = "owner";
         }
 
@@ -326,7 +324,7 @@ function cancel(req, res) {
 /**
  * Payment with several options
  * @param {object}  req
- * @param {number}  params.cardId
+ * @param {ObjectId} params.cardId
  * @param {string}  params.operation     - Payement operation type ("payment", "deposit", "deposit-payment")
  * @param {string}  [params.userMessage] - Rejection message privateContent (for future email use)
  * @param {object}  res
@@ -356,9 +354,9 @@ function payment(req, res) {
         })
         .then(() => {
             return [
-                Booking.findOne({ id: id }),
+                Booking.findById(id),
                 Card.findOne({
-                    id: cardId,
+                    _id: cardId,
                     userId: req.user.id
                 }),
                 TransactionService.getBookingTransactionsManagers([id])
@@ -375,7 +373,7 @@ function payment(req, res) {
             if (! booking) {
                 throw new NotFoundError();
             }
-            if (req.user.id !== booking.takerId) {
+            if (!µ.isSameId(req.user.id, booking.takerId)) {
                 throw new ForbiddenError();
             }
             // if booking is already paid or cancelled
@@ -467,7 +465,7 @@ function payment(req, res) {
 
                 var limitDate;
                 if (Booking.isNoTime(booking)) {
-                    limitDate = moment().format(formatDate);
+                    limitDate = new Date();
                 } else {
                     limitDate = booking.endDate;
                 }
@@ -479,7 +477,7 @@ function payment(req, res) {
                 }
 
                 return [
-                    User.findOne({ id: booking.ownerId }),
+                    User.findById(booking.ownerId),
                     GeneratorService.getRandomString(20)
                 ];
             })
@@ -635,13 +633,13 @@ function paymentSecure(req, res) {
             }
 
             return [
-                Booking.findOne({ id: id }),
+                Booking.findById(id),
                 Token.findOne({
                     value: tokenValue,
                     userId: userId,
                     type: tokenType
                 }),
-                User.findOne({ id: userId })
+                User.findById(userId)
             ];
         })
         .spread((booking, token, taker) => {
@@ -664,7 +662,7 @@ function paymentSecure(req, res) {
                 throw error;
             }
             if (booking.cancellationId
-                || booking.takerId !== taker.id
+                || !µ.isSameId(booking.takerId, taker.id)
                 || (booking.depositDate && operation === "deposit")
                 || (booking.paymentDate && operation === "payment")
                 || (booking.paymentDate && booking.depositDate && operation === "deposit-payment")
@@ -696,6 +694,7 @@ function paymentSecure(req, res) {
             res.redirect(redirectURL);
         })
         .catch(err => {
+            console.log(err)
             redirectURL += "?error=";
 
             if (err.errorType) {
@@ -859,10 +858,10 @@ function _paymentEndProcess(data) {
                 // if email fails, do not save booking dates in order the process to be done again
                 return _sendBookingPendingEmailsSms(data2)
                     .then(() => {
-                        return Booking.updateOne(booking.id, updateAttrs);
+                        return Booking.findByIdAndUpdate(booking.id, updateAttrs, { new: true });
                     });
             } else {
-                return Booking.updateOne(booking.id, updateAttrs);
+                return Booking.findByIdAndUpdate(booking.id, updateAttrs, { new: true });
             }
         })
         .then(b => {
@@ -956,9 +955,9 @@ function _sendBookingPendingEmailsSms(data) {
             .then(() => {
 
                 return [
-                    ! listing ? Listing.findOne({ id: booking.listingId }) : listing,
-                    User.findOne({ id: booking.ownerId }),
-                    ! taker ? User.findOne({ id: booking.takerId }) : taker
+                    ! listing ? Listing.findById(booking.listingId) : listing,
+                    User.findById(booking.ownerId),
+                    ! taker ? User.findById(booking.takerId) : taker
                 ];
             })
             .spread((listing, owner, taker) => {
@@ -1030,8 +1029,7 @@ function _sendBookingPendingEmailsSms(data) {
             .then((message) => {
                 messageCache.unset(booking.id);
 
-                return Conversation
-                    .findOne({ id: message.conversationId });
+                return Conversation.findById(message.conversationId);
             });
     }
 
@@ -1176,9 +1174,9 @@ function _sendBookingConfirmedEmailsSms(data) {
             .resolve()
             .then(() => {
                 return [
-                    User.findOne({ id: booking.takerId }),
-                    Listing.findOne({ id: booking.listingId }),
-                    User.findOne({ id: booking.ownerId }),
+                    User.findById(booking.takerId),
+                    Listing.findById(booking.listingId),
+                    User.findById(booking.ownerId),
                     Conversation.findOne({ bookingId: booking.id })
                 ];
             })
@@ -1367,7 +1365,7 @@ function createContractToken(req, res) {
         .resolve()
         .then(() => {
             return [
-                Booking.findOne({ id: id }),
+                Booking.findById(id),
                 GeneratorService.getRandomString(20),
                 Token
                     .findOne({
@@ -1393,7 +1391,7 @@ function createContractToken(req, res) {
                 booking.takerId
             ];
 
-            if (! _.contains(allowedPeople, req.user.id)) {
+            if (!µ.includesObjectId(allowedPeople, req.user.id)) {
                 throw new ForbiddenError();
             }
 
@@ -1430,7 +1428,7 @@ function getContract(req, res) {
         .resolve()
         .then(() => {
             return [
-                Booking.findOne({ id: id }),
+                Booking.findById(id),
                 Token.findOne({
                     type: "bookingContract",
                     targetType: "booking",
@@ -1449,7 +1447,7 @@ function getContract(req, res) {
             if (! token) {
                 throw new ForbiddenError();
             }
-            if (token.expirationDate < moment().toISOString()) {
+            if (token.expirationDate < new Date()) {
                 throw new ForbiddenError("token expired");
             }
 

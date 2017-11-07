@@ -1,4 +1,10 @@
-/* global GamificationService, StelaceEvent, StelaceEventService, StelaceSession, User */
+/* global GamificationService, StelaceEventService */
+
+const {
+    StelaceEvent,
+    StelaceSession,
+    User,
+} = require('../models_new');
 
 /**
  * StelaceEventController
@@ -9,11 +15,7 @@
 
 module.exports = {
 
-    find: find,
     findOne: findOne,
-    create: create,
-    update: update,
-    destroy: destroy,
 
     createEvent: createEvent,
     updateEvent: updateEvent
@@ -22,25 +24,9 @@ module.exports = {
 
 var moment = require('moment');
 
-function find(req, res) {
-    return res.forbidden();
-}
-
 function findOne(req, res) {
     // to fix googlebot dumb request
     return res.ok();
-}
-
-function create(req, res) {
-    return res.forbidden();
-}
-
-function update(req, res) {
-    return res.forbidden();
-}
-
-function destroy(req, res) {
-    return res.forbidden();
 }
 
 function createEvent(req, res) {
@@ -78,7 +64,7 @@ function createEvent(req, res) {
             var actionsData = {};
 
             if (actionsIds.length) {
-                var user = yield User.findOne({ id: userId });
+                var user = yield User.findById(userId);
                 if (user) {
                     yield GamificationService.checkActions(user, actionsIds, actionsData, logger, req);
                 }
@@ -111,13 +97,13 @@ function updateEvent(req, res) {
 
         var stelaceEvent = yield StelaceEvent.updateOne(
             {
-                id: id,
+                _id: id,
                 token: token
             },
             updateAttrs
         );
 
-        yield StelaceSession.updateOne(stelaceEvent.sessionId, { lastEventDate: now });
+        yield StelaceSession.findByIdAndUpdate(stelaceEvent.sessionId, { lastEventDate: now }, { new: true });
     })()
     .then(() => res.ok())
     .catch(() => res.ok());

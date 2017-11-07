@@ -1,4 +1,8 @@
-/* global mangopay, Card */
+/* global mangopay */
+
+const {
+    Card,
+} = require('../models_new');
 
 /**
  * CardController
@@ -9,10 +13,7 @@
 
 module.exports = {
 
-    find: find,
-    findOne: findOne,
     create: create,
-    update: update,
     destroy: destroy,
 
     my: my,
@@ -21,14 +22,6 @@ module.exports = {
 };
 
 var CryptoJS = require('crypto-js');
-
-function find(req, res) {
-    return res.forbidden();
-}
-
-function findOne(req, res) {
-    return res.forbidden();
-}
 
 function create(req, res) {
     var cardRegistrationId = req.param("cardRegistrationId");
@@ -86,10 +79,6 @@ function create(req, res) {
         .catch(res.sendError);
 }
 
-function update(req, res) {
-    return res.forbidden();
-}
-
 function destroy(req, res) {
     var id = req.param("id");
 
@@ -97,7 +86,7 @@ function destroy(req, res) {
         .resolve()
         .then(() => {
             return Card.findOne({
-                id: id,
+                _id: id,
                 userId: req.user.id
             });
         })
@@ -106,10 +95,10 @@ function destroy(req, res) {
                 throw new NotFoundError();
             }
 
-            return Card.updateOne(card.id, { forget: true });
+            return Card.findByIdAndUpdate(card.id, { forget: true }, { new: true });
         })
         .then(() => {
-            res.json({ id: id });
+            res.json({ id });
         })
         .catch(res.sendError);
 }
@@ -120,7 +109,7 @@ function my(req, res) {
     return Card
         .find({
             userId: req.user.id,
-            validity: { '!': "INVALID" },
+            validity: { $ne: "INVALID" },
             active: true,
             forget: false
         })

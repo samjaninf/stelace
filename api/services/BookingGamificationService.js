@@ -1,4 +1,8 @@
-/* global GamificationService, User */
+/* global GamificationService */
+
+const {
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -14,14 +18,14 @@ function afterBookingPaidAndAccepted(booking, logger, req) {
             var actionsIds  = [];
             var actionsData = {};
 
-            if (booking.ownerId === user.id) {
+            if (µ.isSameId(booking.ownerId, user.id)) {
                 actionsIds = [
                     "FIRST_RENTING_OUT",
                 ];
                 actionsData = {
                     FIRST_RENTING_OUT: { booking: booking },
                 };
-            } else if (booking.takerId === user.id) {
+            } else if (µ.isSameId(booking.takerId, user.id)) {
                 actionsIds = [
                     "FIRST_BOOKING",
                 ];
@@ -41,10 +45,10 @@ function afterBookingPaidAndAccepted(booking, logger, req) {
 function getAfterBookingPaidAndAcceptedData(booking) {
     return Promise.coroutine(function* () {
         var usersIds = [booking.ownerId, booking.takerId];
-        var users = yield User.find({ id: usersIds });
+        var users = yield User.find({ _id: usersIds });
 
-        var owner  = _.find(users, { id: booking.ownerId });
-        var taker  = _.find(users, { id: booking.takerId });
+        var owner  = _.find(users, user => µ.isSameId(user.id, booking.ownerId));
+        var taker  = _.find(users, user => µ.isSameId(user.id, booking.takerId));
 
         var errorData = {};
         if (! owner) {

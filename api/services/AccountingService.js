@@ -1,7 +1,14 @@
 /*
-    global Booking, Listing, odoo, OdooApiService, OdooService, PricingService,
-    Transaction, TransactionService, User
+    global odoo, OdooApiService, OdooService, PricingService,
+    TransactionService
 */
+
+const {
+    Booking,
+    Listing,
+    Transaction,
+    User,
+} = require('../models_new');
 
 module.exports = {
 
@@ -163,10 +170,10 @@ function getTransactionsData(startDate, endDate) {
 
         var periodAttrs = {};
         if (startDate) {
-            periodAttrs[">"] = startDate;
+            periodAttrs.$gt = startDate;
         }
         if (endDate) {
-            periodAttrs["<="] = endDate;
+            periodAttrs.$lte = endDate;
         }
         if (! _.isEmpty(periodAttrs)) {
             findAttrs.mgpCreatedDate = periodAttrs;
@@ -177,7 +184,7 @@ function getTransactionsData(startDate, endDate) {
             .sort({ mgpCreatedDate: 1 });
 
         var bookingsIds = _.pluck(transactions, "bookingId");
-        var bookings    = yield Booking.find({ id: bookingsIds });
+        var bookings    = yield Booking.find({ _id: bookingsIds });
 
         var listingsIds = _.pluck(bookings, "listingId");
         var usersIds = _.reduce(bookings, (memo, booking) => {
@@ -187,7 +194,7 @@ function getTransactionsData(startDate, endDate) {
         usersIds = _.uniq(usersIds);
 
         var results = yield Promise.props({
-            users: User.find({ id: usersIds }),
+            users: User.find({ _id: usersIds }),
             listings: Listing.getListingsOrSnapshots(listingsIds),
             transactionManagers: TransactionService.getBookingTransactionsManagers(bookingsIds)
         });

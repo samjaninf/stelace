@@ -1,10 +1,15 @@
-/* global Booking, BootstrapService, Listing, ListingTypeService, TimeService */
+/* global BootstrapService, ListingTypeService, TimeService */
 
 const Sails = require('sails');
 const moment = require('moment');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Booking,
+    Listing,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -61,12 +66,12 @@ Sails.load({
                 updateAttrs.listingType = listingType;
             }
 
-            await Booking.updateOne(booking.id, updateAttrs);
+            await Booking.findByIdAndUpdate(booking.id, updateAttrs, { new: true });
         });
 
         const listings = await Listing.find();
         await Promise.map(listings, async (listing) => {
-            await Listing.updateOne(listing.id, { quantity: 1 });
+            await Listing.findByIdAndUpdate(listing.id, { quantity: 1 }, { new: true });
         });
     } catch (err) {
         console.log(err);

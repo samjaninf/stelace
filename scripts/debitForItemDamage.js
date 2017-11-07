@@ -1,9 +1,16 @@
-/* global Booking, BootstrapService, Card, mangopay, Transaction, User */
+/* global BootstrapService, mangopay */
 
 var Sails = require('sails');
 
 global._       = require('lodash');
 global.Promise = require('bluebird');
+
+const {
+    Booking,
+    Card,
+    Transaction,
+    User,
+} = require('../api/models_new');
 
 Sails.load({
     models: {
@@ -33,10 +40,10 @@ Sails.load({
         .resolve()
         .then(() => {
             return [
-                User.findOne({ id: userId }),
-                User.findOne({ id: ownerId }),
-                Booking.findOne({ id: bookingId }),
-                Card.findOne({ id: cardId })
+                User.findById(userId),
+                User.findById(ownerId),
+                Booking.findById(bookingId),
+                Card.findById(cardId)
             ];
         })
         .spread((user, owner, booking, card) => {
@@ -47,7 +54,7 @@ Sails.load({
             ) {
                 throw new Error("missing references");
             }
-            if (card.userId !== userId) {
+            if (!µ.isSameId(card.userId, userId)) {
                 throw new Error("bad card");
             }
 

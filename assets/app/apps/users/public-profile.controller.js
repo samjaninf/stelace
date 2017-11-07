@@ -27,7 +27,7 @@
                                 StelaceEvent,
                                 toastr,
                                 tools) {
-        var userId    = parseInt($stateParams.id, 10);
+        var userId    = $stateParams.id;
         var listeners = [];
         // var oldMedia;
         // var currentMedia;
