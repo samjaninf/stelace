@@ -278,7 +278,9 @@ async function create(req, res) {
         }
 
         let listing = await Listing.create(createAttrs);
-        listing = await Listing.updateTags(listing, createAttrs.tags);
+        if (createAttrs.tags) {
+            listing = await Listing.updateTags(listing, createAttrs.tags);
+        }
 
         await StelaceEventService.createEvent({
             req: req,
@@ -395,7 +397,9 @@ async function update(req, res) {
         }
 
         let exposedListing = await Listing.findByIdAndUpdate(listing.id, updateAttrs, { new: true });
-        exposedListing = await Listing.updateTags(exposedListing, updateAttrs.tags);
+        if (updateAttrs.tags) {
+            exposedListing = await Listing.updateTags(exposedListing, updateAttrs.tags);
+        }
 
         res.json(Listing.expose(exposedListing, access));
     } catch (err) {
