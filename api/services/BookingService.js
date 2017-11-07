@@ -366,25 +366,25 @@ function getAvailabilityPeriods(futureBookings, { newBooking, maxQuantity } = {}
 
     _.forEach(futureBookings, booking => {
         dateSteps.push({
-            date: booking.startDate.toISOString(),
+            date: new Date(booking.startDate).toISOString(),
             delta: booking.quantity,
         });
 
         dateSteps.push({
-            date: booking.endDate.toISOString(),
+            date: new Date(booking.endDate).toISOString(),
             delta: -booking.quantity,
         });
     });
 
     if (newBooking) {
         dateSteps.push({
-            date: newBooking.startDate.toISOString(),
+            date: new Date(newBooking.startDate).toISOString(),
             delta: newBooking.quantity,
             newPeriod: 'start',
         });
 
         dateSteps.push({
-            date: newBooking.endDate.toISOString(),
+            date: new Date(newBooking.endDate).toISOString(),
             delta: -newBooking.quantity,
             newPeriod: 'end',
         });

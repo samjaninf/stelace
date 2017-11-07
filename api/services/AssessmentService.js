@@ -147,7 +147,7 @@ function createAssessment(args) {
 
         if (typeof beforeAssessment === "undefined") {
             beforeAssessment = yield Assessment.getLastSigned(booking.listingId);
-        } else if (µ.isSameId(beforeAssessment.listingId, booking.listingId)) {
+        } else if (!µ.isSameId(beforeAssessment.listingId, booking.listingId)) {
             throw new BadRequestError("the before assessment and booking don't match on listing id");
         }
 

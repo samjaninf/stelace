@@ -5,7 +5,6 @@ const moment = require('moment');
 
 const { extendSchema } = require('./util');
 const Conversation = require('./Conversation');
-const Listing = require('./Listing');
 
 const BookingSchema = mongoose.Schema({
     listingId: {
@@ -317,6 +316,8 @@ BookingSchema.statics.canListingQuantityEvolve = function (booking) {
  * @param {String} actionType - possible values: ['add', 'remove']
  */
 BookingSchema.statics.updateListingQuantity = async function (booking, { actionType }) {
+    const Listing = require('./Listing');
+
     if (!_.includes(['add', 'remove'], actionType)) {
         throw new Error('Incorrect action type');
     }
