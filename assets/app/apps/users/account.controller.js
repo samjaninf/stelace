@@ -430,7 +430,7 @@
 
                         return $q.all(_.map(resListings, function (listing) {
                             listing.locations.push(location.id);
-                            return listing.save();
+                            return listing.put();
                         }));
                     }
                 });

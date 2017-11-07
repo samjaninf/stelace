@@ -147,7 +147,12 @@
 
                     usSpinnerService.spin('save-assessment-spinner');
 
-                    return vm.assessment.save();
+                    // check for assessment id because restangular save doesn't work well with ObjectId
+                    if (vm.assessment.id) {
+                        return vm.assessment.put();
+                    } else {
+                        return vm.assessment.save();
+                    }
                 })
                 .then(function () {
                     if (! vm.assessment.signedDate && ! vm.signToken) {
