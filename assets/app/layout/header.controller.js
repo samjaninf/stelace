@@ -79,6 +79,8 @@
 
 
         function activate() {
+            var stlConfig = StelaceConfig.getConfig();
+
             // Avoid spamming popover after accomplished actions
             throttledActionPopover = _.throttle(_openProgressPopoverAfterAction, 90000, { leading: true, trailing: false });
 
@@ -166,6 +168,7 @@
             $rootScope.searchFiltersConfig = $rootScope.searchFiltersConfig || { showAdvancedSearch: false };
             $rootScope.searchParams        = $rootScope.searchParams || {
                 queryMode: "default",
+                maxDistance: 500,
                 myLocations: []
             };
             $rootScope.showMap = vm.showMap;

@@ -55,6 +55,17 @@
                     ng-options="mode.value as mode.label for mode in vm.queryModes">
                 </select>
             </div>
+            <div>
+                <div class="query-label" data-translate="search.distance_filter">
+                </div>
+                <div class="search__distance-slider-container">
+                    <rzslider
+                        data-rz-slider-model="vm.distanceSlider.value"
+                        data-rz-slider-options="vm.distanceSlider.options"
+                    >
+                    </rzslider>
+                </div>
+            </div>
         </div>
         <div class="search__my-locations padding-bottom margin-bottom"
             data-uib-collapse="vm.params.queryMode === 'relevance' || ! vm.myLocations.length">

@@ -1877,6 +1877,18 @@ search:
     results_near_location:
         en: 'Results near {locationName}'
         fr: 'Résultats près de {locationName}'
+    distance_filter:
+        en: Distance
+        fr: Distance
+    distance_filter_nearest:
+        en: Nearest
+        fr: Au plus proche
+    distance_filter_everywhere:
+        en: Everywhere
+        fr: Tous lieux
+    distance_value_kilometers:
+        en: '{distance, number}km'
+        fr: '{distance, number}km'
 referral:
     prompt:
         en: Invite your friends

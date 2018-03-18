@@ -133,8 +133,9 @@
             if (urlParams.listingTypeId) {
                 $rootScope.searchParams.listingTypeId = urlParams.listingTypeId;
             }
-
-            // vm.onlyFree = urlParams.onlyFree;
+            if (urlParams.maxDistanceKm) {
+                $rootScope.searchParams.max_km = urlParams.maxDistanceKm;
+            }
 
             $rootScope.searchParams.queryMode = $rootScope.searchParams.queryMode || defaultQueryMode;
 
@@ -157,16 +158,6 @@
 
                 search();
             });
-
-            // when the free option changes
-            // $scope.$watch("vm.onlyFree", function () {
-            //     if (noTriggerSearch.onlyFree) {
-            //         noTriggerSearch.onlyFree = false;
-            //         return;
-            //     }
-
-            //     search();
-            // });
 
             // when the query change
             // $scope.$watch("vm.searchQuery.query", _.debounce(function () {
@@ -235,7 +226,6 @@
 
             // noTriggerSearch.myLocations = true;
             noTriggerSearch.location    = true;
-            // noTriggerSearch.onlyFree    = true;
             // noTriggerSearch.query       = true;
 
             return $q.all({
@@ -349,8 +339,9 @@
             if ($stateParams.t && !isNaN($stateParams.t)) {
                 urlParams.listingTypeId = parseInt($stateParams.t, 10);
             }
-
-            // urlParams.onlyFree = $stateParams.free === "true";
+            if ($stateParams.max_km && !isNaN($stateParams.max_km)) {
+                urlParams.maxDistanceKm = $parseInt($stateParams.max_km, 10);
+            }
 
             return urlParams;
         }
@@ -394,6 +385,8 @@
         }
 
         function search(sorting) {
+            return;
+
             var ipDefaultLocation;
             var searchParams = {};
             var fromLocations = [];
@@ -418,10 +411,6 @@
                 urlLocation = null;
             }
             previousSearchLocationInput = vm.searchLocationInput;
-
-            // if (vm.onlyFree) {
-            //     searchParams.onlyFree = true;
-            // }
 
             return $q.when(true)
                 .then(function () {
@@ -513,6 +502,9 @@
 
                     if ($rootScope.searchParams.queryMode) {
                         searchParams.queryMode = $rootScope.searchParams.queryMode;
+                    }
+                    if ($rootScope.searchParams.max_km && !isNaN($rootScope.searchParams.max_km)) {
+                        searchParams.distanceLimitMeters = parseInt($rootScope.searchParams.max_km, 10) * 1000;
                     }
 
                     // if no locations at this point, change the query mode to "default"
@@ -625,8 +617,6 @@
                     } else {
                         stateParams.page = vm.currentPage;
                     }
-
-                    // stateParams.free = (vm.onlyFree ? "true" : null);
 
                     vm.nbTotalListings = searchResults.count;
 

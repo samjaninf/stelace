@@ -61,10 +61,10 @@
                 noAuthNeeded: true
             })
             .state("search", _.defaults({
-                url: "/s?page&l&qm&t&free&reset"
+                url: "/s?page&l&qm&t&reset&max_km"
             }, listingStateConfig))
             .state("searchWithQuery", _.defaults({
-                url: "/s/:query?page&l&qm&t&free&reset&q"
+                url: "/s/:query?page&l&qm&t&reset&q&max_km"
             }, listingStateConfig));
     }
 

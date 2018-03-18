@@ -74,6 +74,9 @@ const schema = {
         map__default_search_zoom:{
             type: ['number', 'null']
         },
+        search__max_distance_meters: {
+            type: ['number', 'null'],
+        },
         stripe_complete: {
             type: ['boolean', 'null'],
         },

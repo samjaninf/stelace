@@ -9,21 +9,59 @@
                                     $rootScope,
                                     $scope,
                                     $state,
+                                    $translate,
                                     ListingService,
                                     ListingTypeService,
                                     LocationService,
                                     platform,
+                                    StelaceConfig,
                                     tools,
                                     UserService) {
+        var stlConfig = StelaceConfig.getConfig();
         var listeners = [];
         var doc = $document[0].documentElement;
         var lockScrollClass = "modal-opened";
         var lockTarget;
         var currentUser;
         var fetchedListingTypes = false;
+        var minDistance = 1;
+        var maxDistance = (stlConfig.search__max_distance || 500) + 1; // default max distance: 500km
 
         var vm = this;
+        vm.params = vm.params || {}; // vm.params comes from $rootScope.searchParams (via root.html)
         vm.queryModes = ListingService.getSearchFilters("queryModes");
+
+        vm.distanceSlider = {
+            value: maxDistance,
+            options: {
+                floor: minDistance,
+                ceil: maxDistance,
+                logScale: true,
+                translate: function (value) {
+                    if (value === minDistance) {
+                        return $translate.instant('search.distance_filter_nearest');
+                    } else if (value === maxDistance) {
+                        return $translate.instant('search.distance_filter_everywhere');
+                    } else {
+                        return $translate.instant('search.distance_value_kilometers', {
+                            distance: value
+                        });
+                    }
+                },
+                onChange: function (sliderId, value) {
+                    if (value === minDistance) {
+                        vm.params.qm = 'distance';
+                        vm.params.max_km = null;
+                    } else if (value === maxDistance) {
+                        vm.params.qm = 'relevance';
+                        vm.params.max_km = null;
+                    } else {
+                        vm.params.qm = 'default';
+                        vm.params.max_km = value;
+                    }
+                }
+            },
+        };
         vm.timeProperties = {
             NONE: true,
             TIME_FLEXIBLE: true,
@@ -45,6 +83,10 @@
             }, function() {
                 vm.myLocations = $rootScope.myLocations;
             }, true);
+
+            $scope.$watch(function () {
+                return $rootScope.searchParams
+            });
 
             $scope.$watch(function() {
                 return $rootScope.searchParams.listingTypeId;
