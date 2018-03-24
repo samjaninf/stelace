@@ -103,6 +103,14 @@ const schema = {
             type: ['string', 'null'],
             enum: ['individual', 'organization', null],
         },
+        phone_prompt__owner_level: {
+            type: ['string', 'null'],
+            enum: ['show', 'require', null],
+        },
+        phone_prompt__taker_level: {
+            type: ['string', 'null'],
+            enum: ['show', 'require', null],
+        },
     },
 };
 
