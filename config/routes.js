@@ -193,6 +193,9 @@ module.exports.routes = {
     'get /api/v0.1/contents/entries/default': { target: 'v0_1/ContentEntriesController.findDefault', cors: apiCors },
     'patch /api/v0.1/contents/entries/default': { target: 'v0_1/ContentEntriesController.updateDefault', cors: apiCors },
 
+    'get /api/v0.1/email/templates/preview': { target: 'v0_1/EmailTemplateController.preview', cors: apiCors },
+    'post /api/v0.1/email/templates/preview': { target: 'v0_1/EmailTemplateController.preview', cors: apiCors },
+
     'get /api/v0.1/info/me': { target: 'v0_1/InfoController.me', cors: apiCors },
     'get /api/v0.1/info/my-permissions': { target: 'v0_1/InfoController.getMyPermissions', cors: apiCors },
     'get /api/v0.1/info/plan-permissions': { target: 'v0_1/InfoController.getPlanPermissions', cors: apiCors },

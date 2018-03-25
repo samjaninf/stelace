@@ -148,3 +148,41 @@ async function sendEmailTemplate(/* templateName, args */) {
     // TODO: replace with real templates
     await Promise.resolve();
 }
+
+
+function applyHandlebars() {
+    const data = {
+        preview_content,
+        trailing_contact__block,
+        trailing_contact,
+        service_logo__block,
+        service_logo__url,
+        main_title__block,
+        main_title,
+        leading_content__block,
+        leading_content,
+        notification_image__block,
+        notification_image__href,
+        notification_image__alt,
+        notification_image__width,
+        notification_image__max_width,
+        notification_image__custom_styles,
+        content,
+        cta_button__block,
+        cta__button_url,
+        cta_button__text,
+        trailing_content__block,
+        trailing_content,
+        featured__block,
+        featured__image__href,
+        featured__image__alt,
+        featured__image__url,
+        featured__title,
+        end_content__block,
+        end_content,
+        custom_goodbye,
+        footer_content,
+        copyright,
+
+    };
+}

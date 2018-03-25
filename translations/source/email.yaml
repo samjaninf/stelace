@@ -1,0 +1,23 @@
+general:
+    copyright:
+        en: 'Copyright © {current_year}, all right reserved.'
+        fr: 'Copyright © {current_year}, tous droits réservés.'
+template:
+    email_confirmation:
+        subject:
+        mainTitle:
+        previewContent:
+        trailingContact:
+        leadingContent:
+        content:
+        ctaButtonText:
+        ctaUrl:
+        trailingContent:
+        featuredTitle
+        featuredContent
+        endContent
+        customGoodbye
+        footerContent
+
+
+        serviceLogoUrl

@@ -8,7 +8,10 @@ module.exports = {
 
     generateText: generateText,
 
-    getTrackingStats: getTrackingStats
+    getTrackingStats: getTrackingStats,
+
+    getHandlebars,
+    registerHbsHelpers,
 
 };
 
@@ -34,6 +37,10 @@ function getSparkpostClient() {
         sparkpostClient = new Sparkpost(sails.config.sparkpost.apiKey);
     }
     return sparkpostClient;
+}
+
+function getHandlebars() {
+    return Handlebars;
 }
 
 /**
