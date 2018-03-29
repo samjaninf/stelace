@@ -135,6 +135,15 @@
             if (urlParams.listingTypesIds) {
                 $rootScope.searchParams.listingTypesIds = urlParams.listingTypesIds;
             }
+            if (urlParams.startDate) {
+                $rootScope.searchParams.startDate = urlParams.startDate;
+            }
+            if (urlParams.endDate) {
+                $rootScope.searchParams.endDate = urlParams.endDate;
+            }
+            if (urlParams.quantity) {
+                $rootScope.searchParams.quantity = urlParams.quantity;
+            }
 
             // vm.onlyFree = urlParams.onlyFree;
 
@@ -357,6 +366,19 @@
                     urlParams.listingTypesIds = [parseInt($stateParams.t, 10)];
                 }
             }
+            if ($stateParams.start) {
+                if (time.isDateString($stateParams.start) || time.isDateString($stateParams.start, { onlyDate: true })) {
+                    urlParams.startDate = $stateParams.start;
+                }
+            }
+            if ($stateParams.end) {
+                if (time.isDateString($stateParams.end) || time.isDateString($stateParams.end, { onlyDate: true })) {
+                    urlParams.endDate = $stateParams.end;
+                }
+            }
+            if ($stateParams.qty && !isNaN($stateParams.qty)) {
+                urlParams.quantity = parseInt($stateParams.qty, 10);
+            }
 
             // urlParams.onlyFree = $stateParams.free === "true";
 
@@ -519,6 +541,16 @@
                     // if no locations at this point, change the query mode to "default"
                     if (! fromLocations.length) {
                         searchParams.queryMode = 'default';
+                    }
+
+                    if ($rootScope.searchParams.startDate) {
+                        searchParams.startDate = $rootScope.searchParams.startDate;
+                    }
+                    if ($rootScope.searchParams.endDate) {
+                        searchParams.endDate = $rootScope.searchParams.endDate;
+                    }
+                    if ($rootScope.searchParams.quantity) {
+                        searchParams.quantity = $rootScope.searchParams.quantity;
                     }
 
                     platform.debugDev("listing search", searchParams);

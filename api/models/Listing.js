@@ -457,7 +457,7 @@ async function getBookings(listingsIds, {
         }
     }
 
-    findAttrs.listingId      = listingsIds;
+    findAttrs.listingId      = listingsIds.slice(0);
     findAttrs.cancellationId = null;
     findAttrs.paidDate       = { '!=': null };
     findAttrs.acceptedDate   = { '!=': null };

@@ -66,10 +66,10 @@
                 // no default meta tags: see controller
             })
             .state("search", _.defaults({
-                url: "/s?page&l&qm&t&free&reset"
+                url: "/s?page&l&qm&t&free&reset&start&end&qty"
             }, listingSearchConfig))
             .state("searchWithQuery", _.defaults({
-                url: "/s/:query?page&l&qm&t&free&reset&q"
+                url: "/s/:query?page&l&qm&t&free&reset&q&start&end&qty"
             }, listingSearchConfig));
     }
 

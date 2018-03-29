@@ -1,7 +1,7 @@
 /* global
-    ElasticsearchService, Listing, ListingCategory, Location,
+    BookingService, ElasticsearchService, Listing, ListingAvailability, ListingCategory, ListingTypeService, Location,
     MapService, Media, MicroService, SearchEvent,
-    StelaceConfigService, StelaceEventService, UAService, User
+    StelaceConfigService, StelaceEventService, TimeService, UAService, User
 */
 
 module.exports = {
@@ -52,6 +52,9 @@ async function getListingsFromQuery(searchQuery, type) {
         locations,
         similarToListingsIds,
         distanceLimitMeters,
+        startDate,
+        endDate,
+        quantity,
     } = searchQuery;
 
     const config = await StelaceConfigService.getConfig();
@@ -130,6 +133,12 @@ async function getListingsFromQuery(searchQuery, type) {
         }
 
         listings = convertCombineMetricsToListings(combinedMetrics, listings);
+    }
+
+    let filterOnAvailability = (startDate && endDate) || quantity;
+    if (filterOnAvailability) {
+        const listingTypes = await ListingTypeService.getAllListingTypes();
+        listings = await filterAvailableListings(listings, { startDate, endDate, quantity, listingTypes });
     }
 
     const {
@@ -462,6 +471,89 @@ async function getJourneysInfo(fromLocations, hashLocations) {
     return hashJourneys;
 }
 
+async function filterAvailableListings(listings, { startDate, endDate, quantity, listingTypes }) {
+    const indexedListingTypes = _.indexBy(listingTypes, 'id');
+    const listingsIds = _.pluck(listings, 'id');
+
+    const today = TimeService.getPureDate(new Date().toISOString());
+
+    const [
+        hashFutureBookings,
+        allListingAvailabilities,
+    ] = await Promise.all([
+        Listing.getFutureBookings(listingsIds),
+        ListingAvailability.find({ listingId: listingsIds.slice(0) }),
+    ]);
+
+    const hashListingAvailabilities = _.groupBy(allListingAvailabilities, 'listingId');
+
+    const availableListings = [];
+
+    _.forEach(listings, listing => {
+        if (!listing.listingTypesIds || !listing.listingTypesIds.length) {
+            return;
+        }
+
+        const listingTypeId = listing.listingTypesIds[0];
+        const listingType = indexedListingTypes[listingTypeId];
+        if (!listingType) return;
+
+        const { TIME } = listingType.properties;
+
+        const maxQuantity = Listing.getMaxQuantity(listing, listingType);
+
+        let isAvailable = false;
+
+        const futureBookings = hashFutureBookings[listing.id];
+
+        if (TIME === 'NONE') {
+            if (!quantity) {
+                isAvailable = true;
+            } else {
+                isAvailable = quantity <= maxQuantity;
+            }
+        } else if (TIME === 'TIME_PREDEFINED') {
+            let listingAvailabilities = hashListingAvailabilities[listing.id];
+            listingAvailabilities = _.filter(listingAvailabilities, l => {
+                return l.type === 'date' && l.startDate >= today;
+            });
+
+            const availabilityGraph = BookingService.getAvailabilityDateGraph({ futureBookings, listingAvailabilities, maxQuantity });
+            const availabilityResult = BookingService.searchAvailabilityDateInfo(availabilityGraph, {
+                startDate,
+                endDate,
+                quantity,
+                refDate: today,
+                recurringDatesPattern: listing.recurringDatesPattern,
+                timeUnit: listingType.config.bookingTime.timeUnit,
+            });
+
+            isAvailable = availabilityResult.isAvailable;
+        } else if (TIME === 'TIME_FLEXIBLE') {
+            let listingAvailabilities = hashListingAvailabilities[listing.id];
+            listingAvailabilities = _.filter(listingAvailabilities, l => {
+                return l.type === 'period' && l.endDate >= today;
+            });
+
+            const availabilityGraph = BookingService.getAvailabilityPeriodGraph({ futureBookings, listingAvailabilities, maxQuantity });
+            const availabilityResult = BookingService.searchAvailabilityPeriodInfo(availabilityGraph, {
+                startDate,
+                endDate,
+                quantity,
+                refDate: today,
+            });
+
+            isAvailable = availabilityResult.isAvailable;
+        }
+
+        if (isAvailable) {
+            availableListings.push(listing);
+        }
+    });
+
+    return availableListings;
+}
+
 /**
  * Get extra info related to search results listings
  * @param  {object[]} listings - search results
@@ -624,6 +716,9 @@ function setListingsToCache(cacheKey, listings) {
  * @param {Float}    params.locations[i].latitude
  * @param {Float}    params.locations[i].longitude
  * @param {Number}   [params.distanceLimitMeters] - drop any results beyond this limit
+ * @param {String}   [params.startDate] - if dates specified, return only listings that are available durint that period
+ * @param {String}   [params.endDate]
+ * @param {Number}   [params.quantity] - if specified, filter out listings that have not enough quantity
  * @param {String}   [params.sorting]
  * @param {Number[]} [params.withoutIds] - filter out listings with this ids (useful for similar listings)
  * @param {Number[]} [params.similarToListingsIds]
@@ -640,6 +735,9 @@ function normalizeSearchQuery(params) {
         'locationsSource',
         'locations',
         'distanceLimitMeters',
+        'startDate',
+        'endDate',
+        'quantity',
         'sorting',
         'withoutIds',
         'similarToListingsIds',
@@ -678,9 +776,15 @@ function normalizeSearchQuery(params) {
                 isValid = MicroService.checkArray(value, 'id');
                 break;
 
+            case 'startDate':
+            case 'endDate':
+                isValid = TimeService.isDateString(value) || TimeService.isDateString(value, { onlyDate: true });
+                break;
+
             case 'page':
             case 'limit':
             case 'distanceLimitMeters':
+            case 'quantity':
                 isValid = (!isNaN(value) && value >= 1);
                 break;
 
@@ -698,6 +802,13 @@ function normalizeSearchQuery(params) {
     }, {});
 
     searchQuery = Object.assign({}, SEARCH_QUERY_DEFAULTS, { timestamp: new Date().getTime() }, searchQuery);
+
+    if (searchQuery.startDate && TimeService.isDateString(searchQuery.startDate, { onlyDate: true })) {
+        searchQuery.startDate = searchQuery.startDate + 'T00:00:00.000Z';
+    }
+    if (searchQuery.endDate && TimeService.isDateString(searchQuery.endDate, { onlyDate: true })) {
+        searchQuery.endDate = searchQuery.endDate + 'T00:00:00.000Z';
+    }
 
     return searchQuery;
 }

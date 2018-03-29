@@ -13,6 +13,9 @@ module.exports = {
     getAvailabilityPeriodInfo,
     getAvailabilityDateInfo,
 
+    searchAvailabilityPeriodInfo,
+    searchAvailabilityDateInfo,
+
 };
 
 var moment = require('moment');
@@ -566,6 +569,62 @@ function getAvailabilityPeriodInfo(availabilityGraph, newBooking) {
 }
 
 /**
+ * @param {Object} availabilityGraph
+ * @param {Object} searchParams
+ * @param {String} [searchParams.startDate]
+ * @param {String} [searchParams.endDate]
+ * @param {Number} [searchParams.quantity = 1]
+ * @param {String} [searchParams.refDate]
+ * @return {Object} info
+ * @return {Boolean} info.isAvailable
+ * @return {Number} info.maxRemainingQuantity
+ */
+function searchAvailabilityPeriodInfo(availabilityGraph, searchParams) {
+    const { defaultMaxQuantity, graphDates } = availabilityGraph;
+    let { startDate, endDate, quantity, refDate } = searchParams;
+
+    refDate = refDate || TimeService.getPureDate(new Date().toISOString());
+
+    if (!quantity) {
+        quantity = 1;
+    }
+
+    // if no dates specified, get the max available quantity possible
+    if (!startDate && !endDate) {
+        const beforeRefDateGraphDate = _.last(graphDates.filter(graphDate => graphDate.date <= refDate));
+
+        let filteredGraphDates;
+        if (beforeRefDateGraphDate) {
+            filteredGraphDates = _.filter(graphDates, graphDate => {
+                return graphDate.date >= beforeRefDateGraphDate.date;
+            });
+        } else {
+            filteredGraphDates = graphDates;
+        }
+
+        let maxRemainingQuantity;
+
+        if (!filteredGraphDates.length) {
+            maxRemainingQuantity = defaultMaxQuantity;
+        } else {
+            maxRemainingQuantity = Math.abs(filteredGraphDates[0].maxQuantity - filteredGraphDates[0].usedQuantity);
+
+            filteredGraphDates.forEach(graphDate => {
+                maxRemainingQuantity = Math.max(maxRemainingQuantity, Math.abs(graphDate.maxQuantity - graphDate.usedQuantity));
+            });
+        }
+
+        return {
+            isAvailable: quantity <= maxRemainingQuantity && maxRemainingQuantity > 0,
+            maxRemainingQuantity,
+        };
+    // if dates specified, get the max available quantity over the whole period
+    } else {
+        return getAvailabilityPeriodInfo(availabilityGraph, { startDate, endDate, quantity });
+    }
+}
+
+/**
  * Get the graph that shows availability by date
  * @param {Object[]} futureBookings
  * @param {String} futureBookings[i].startDate
@@ -650,4 +709,79 @@ function getAvailabilityDateInfo(availabilityGraph, newBooking) {
         isAvailable: newBooking.quantity <= maxRemainingQuantity && maxRemainingQuantity > 0,
         maxRemainingQuantity,
     };
+}
+
+/**
+ * @param {Object} availabilityGraph
+ * @param {Object} searchParams
+ * @param {String} [searchParams.startDate]
+ * @param {String} [searchParams.endDate]
+ * @param {Number} [searchParams.quantity = 1]
+ * @param {String} [searchParams.refDate]
+ * @param {String} searchParams.recurringDatesPattern
+ * @param {String} searchParams.timeUnit
+ * @return {Object} info
+ * @return {Boolean} info.isAvailable
+ * @return {Number} info.maxRemainingQuantity
+ */
+function searchAvailabilityDateInfo(availabilityGraph, searchParams) {
+    const { defaultMaxQuantity, graphDates } = availabilityGraph;
+    let { startDate, endDate, quantity, refDate, recurringDatesPattern, timeUnit } = searchParams;
+
+    refDate = refDate || TimeService.getPureDate(new Date().toISOString());
+
+    if (!quantity) {
+        quantity = 1;
+    }
+
+    // if no dates specified, get the max available quantity possible
+    if (!startDate && !endDate) {
+        const beforeRefDateGraphDate = _.last(graphDates.filter(graphDate => graphDate.date <= refDate));
+
+        let filteredGraphDates;
+        if (beforeRefDateGraphDate) {
+            filteredGraphDates = _.filter(graphDates, graphDate => {
+                return graphDate.date >= beforeRefDateGraphDate.date;
+            });
+        } else {
+            filteredGraphDates = graphDates;
+        }
+
+        let maxRemainingQuantity;
+
+        if (!filteredGraphDates.length) {
+            maxRemainingQuantity = defaultMaxQuantity;
+        } else {
+            maxRemainingQuantity = Math.abs(filteredGraphDates[0].maxQuantity - filteredGraphDates[0].usedQuantity);
+
+            filteredGraphDates.forEach(graphDate => {
+                maxRemainingQuantity = Math.max(maxRemainingQuantity, Math.abs(graphDate.maxQuantity - graphDate.usedQuantity));
+            });
+        }
+
+        return {
+            isAvailable: quantity <= maxRemainingQuantity && maxRemainingQuantity > 0,
+            maxRemainingQuantity,
+        };
+    // if dates specified, get the max available quantity over the whole period
+    } else {
+        const recurringDates = TimeService.computeRecurringDates(recurringDatesPattern, {
+            startDate,
+            endDate,
+            onlyPureDate: timeUnit === 'd' || timeUnit === 'M',
+        });
+
+        let availabilityResult;
+
+        _.forEach(recurringDates, date => {
+            const tmpAvailabilityResult = getAvailabilityDateInfo(availabilityGraph, { startDate: date, quantity });
+            if (!availabilityResult
+             || availabilityResult.maxRemainingQuantity < tmpAvailabilityResult.maxRemainingQuantity
+            ) {
+                availabilityResult = tmpAvailabilityResult;
+            }
+        });
+
+        return availabilityResult;
+    }
 }
