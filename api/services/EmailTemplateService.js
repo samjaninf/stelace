@@ -1,13 +1,24 @@
-/* global EmailService, EmailHelperService */
+/* global AppUrlService, ContentEntriesService, CurrencyService, EmailService, EmailHelperService, StelaceConfigService */
 
 module.exports = {
 
     sendGeneralNotificationEmail,
     sendEmailTemplate,
 
+    getListTemplates,
+    getTemplateHTML,
+    getTemplateWorkflow,
+
 };
 
 const _ = require('lodash');
+const fs = require('fs');
+const path = require('path');
+const Promise = require('bluebird');
+const formatMessage = require('format-message');
+const Handlebars = require('handlebars');
+
+Promise.promisifyAll(fs);
 
 const general = {
     filteredFields: [
@@ -58,6 +69,9 @@ const general = {
         "featuredContent"
     ]
 };
+
+let emailTemplate;
+let emailCompiledTemplate;
 
 /**
  * send general notification email
@@ -149,40 +163,280 @@ async function sendEmailTemplate(/* templateName, args */) {
     await Promise.resolve();
 }
 
+async function getTemplateHTML(templateName, { lang, user, isPreview, data = {} }) {
+    const config = await StelaceConfigService.getConfig();
 
-function applyHandlebars() {
-    const data = {
-        preview_content,
-        trailing_contact__block,
-        trailing_contact,
-        service_logo__block,
-        service_logo__url,
-        main_title__block,
-        main_title,
-        leading_content__block,
-        leading_content,
-        notification_image__block,
-        notification_image__href,
-        notification_image__alt,
-        notification_image__width,
-        notification_image__max_width,
-        notification_image__custom_styles,
-        content,
-        cta_button__block,
-        cta__button_url,
-        cta_button__text,
-        trailing_content__block,
-        trailing_content,
-        featured__block,
-        featured__image__href,
-        featured__image__alt,
-        featured__image__url,
-        featured__title,
-        end_content__block,
-        end_content,
-        custom_goodbye,
-        footer_content,
-        copyright,
+    const emailTemplate = await fetchEmailTemplate();
+    const rawContent = await getTemplateContent(templateName, lang);
+    const workflow = getTemplateWorkflow(templateName, { config });
 
+    // transform input data into ICU placeholders
+    let parameters = {};
+    parameters = await beforeTransformData(parameters, { config, data, user, lang });
+    if (typeof workflow.transformData === 'function') {
+        const templateParameters = await workflow.transformData(parameters, { config, data, user, lang });
+        if (templateParameters) {
+            parameters = templateParameters;
+        }
+    }
+
+    // compile user content using ICU placeholders into HBS variables
+    let compiledContent = compileContent(rawContent, parameters, { lang, currency: config.currency });
+
+    // add HBS variables that are not editable by user
+    compiledContent = beforeCompileNonEditableContent(compiledContent, { config, data, user, lang });
+    if (typeof workflow.compileNonEditableContent === 'function') {
+        const templateCompiledContent = workflow.compileNonEditableContent(compiledContent, { config, data, user, lang });
+        if (templateCompiledContent) {
+            compiledContent = templateCompiledContent;
+        }
+    }
+
+    // get allowed blocks
+    let emailTemplateBlocks = getEmailBlocks();
+    if (typeof workflow.getEmailBlocks === 'function') {
+        emailTemplateBlocks = Object.assign({}, emailTemplateBlocks, workflow.getEmailBlocks() || {});
+    }
+
+    // enable or disable email blocks based on preview
+    compiledContent = computeContentBlock(compiledContent, { emailTemplateBlocks, isPreview });
+
+    const html = getHtml(emailTemplate, compiledContent);
+
+    return html;
+}
+
+async function fetchEmailTemplate() {
+    if (emailTemplate) {
+        return emailTemplate;
+    }
+
+    const emailFilepath = path.join(__dirname, '../assets/emailsTemplates/general.html');
+    emailTemplate = await fs.readFileAsync(emailFilepath, 'utf8');
+
+    return emailTemplate;
+}
+
+async function getTemplateContent(templateName, lang) {
+    const rawContent = await ContentEntriesService.getTranslations({ lang, namespace: 'email' });
+
+    return Object.assign({}, rawContent.general, rawContent.template[templateName]);
+}
+
+function configureFormatMessage(formatMessage, { lang, currency = 'EUR' }) {
+    let customFormats = {};
+
+    if (currency) {
+        const currencyDecimal = CurrencyService.getCurrencyDecimal(currency);
+
+        customFormats.number = {
+            currency: {
+                style: 'currency',
+                currency,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: currencyDecimal,
+            },
+        };
+    }
+
+    customFormats.date = {
+        fullmonth: {
+            month: 'long',
+            year: 'numeric',
+        },
+    };
+
+    formatMessage.setup({
+        locale: lang,
+        formats: Object.keys(customFormats).length ? customFormats : undefined,
+    });
+}
+
+function compileContent(rawContent, parameters, { lang, currency }) {
+    const compiledContent = {};
+
+    configureFormatMessage(formatMessage, { lang, currency });
+
+    Object.keys(rawContent).forEach(key => {
+        const value = rawContent[key];
+        compiledContent[key] = formatMessage(value, parameters);
+    });
+
+    return compiledContent;
+}
+
+function beforeCompileNonEditableContent(content, { config, /*data, user, lang*/ }) {
+    const newContent = {};
+
+    if (config.logo__url) {
+        newContent.service_logo__url = sails.config.stelace.url + config.logo__url;
+    }
+
+    return Object.assign({}, content, newContent);
+}
+
+function computeContentBlock(content, { emailTemplateBlocks, isPreview }) {
+    const newContent = {};
+
+    const blockNames = [
+        'trailing_contact__block',
+        'service_logo__block',
+        'main_title__block',
+        'leading_content__block',
+        'notification_image__block',
+        'cta_button__block',
+        'trailing_content__block',
+        'featured__block',
+        'end_content__block',
+    ];
+
+    // use email blocks
+    blockNames.forEach(name => {
+        newContent[name] = !!emailTemplateBlocks[name];
+    });
+
+    // if not preview, hide blocks that have no value
+    if (!isPreview) {
+        let computedBlock = {};
+
+        computedBlock.trailing_contact__block = !!content.trailing_contact;
+        computedBlock.service_logo__block = !!content.service_logo__url;
+        computedBlock.main_title__block = !!content.main_title;
+        computedBlock.leading_content__block = !!content.leading_content;
+        computedBlock.notification_image__block = !!content.notification_image__href;
+        computedBlock.cta_button__block = !!content.cta_button__text;
+        computedBlock.trailing_content__block = !!content.trailing_content;
+        computedBlock.featured__block = !!content.featured__content;
+        computedBlock.end_content__block = !!content.end_content;
+
+        blockNames.forEach(name => {
+            if (!newContent[name]) return;
+            newContent[name] = computedBlock[name];
+        });
+    }
+
+    return Object.assign({}, content, newContent);
+}
+
+function getHtml(emailTemplate, content) {
+    if (!emailCompiledTemplate) {
+        emailCompiledTemplate = Handlebars.compile(emailTemplate);
+    }
+
+    const fields = [
+        'subject',
+        'preview_content',
+        'trailing_contact__block',
+        'trailing_contact',
+        'service_logo__block',
+        'service_logo__url',
+        'main_title__block',
+        'main_title',
+        'leading_content__block',
+        'leading_content',
+        'notification_image__block',
+        'notification_image__href',
+        'notification_image__alt',
+        'notification_image__width',
+        'notification_image__max_width',
+        'notification_image__custom_styles',
+        'content',
+        'cta_button__block',
+        'cta__button_url',
+        'cta_button__text',
+        'trailing_content__block',
+        'trailing_content',
+        'featured__block',
+        'featured__image__href',
+        'featured__image__alt',
+        'featured__image__url',
+        'featured__title',
+        'featured__content',
+        'end_content__block',
+        'end_content',
+        'custom_goodbye',
+        'footer_content',
+        'copyright',
+    ];
+
+    return emailCompiledTemplate(_.pick(content, fields));
+}
+
+function getEmailBlocks() {
+    const commonBlocks = {
+        trailing_contact__block: true,
+        service_logo__block: true,
+        main_title__block: true,
+        leading_content__block: true,
+        notification_image__block: false,
+        cta_button__block: false,
+        trailing_content__block: true,
+        featured__block: false,
+        end_content__block: true,
+    };
+
+    return Object.assign({}, commonBlocks);
+}
+
+async function beforeTransformData(parameters, { config, user }) {
+    const newParams = {};
+
+    newParams.SERVICE_NAME = config.SERVICE_NAME;
+
+    if (typeof user === 'object') {
+        newParams.user__firstname = user.firstname || undefined;
+        newParams.user__lastname = user.lastname || undefined;
+    }
+    newParams.current_year = '' + new Date().getFullYear();
+
+    return Object.assign({}, parameters, newParams);
+}
+
+function getListTemplates() {
+    return [
+        'subscription_to_confirm',
+    ];
+}
+
+function getTemplateWorkflow(templateName, { config }) {
+    let transformData;
+    let getEmailBlocks;
+    let compileNonEditableContent;
+    let parametersMetadata;
+
+    parametersMetadata = {
+        SERVICE_NAME: {
+            type: 'string',
+            exampleValue: config.SERVICE_NAME,
+        },
+    };
+
+    if (templateName === 'subscription_to_confirm') {
+        // transformData = async function (parameters, { config, data, user, lang }) {
+
+        // };
+
+        getEmailBlocks = function () {
+            return {
+                cta_button__block: true,
+            };
+        };
+
+        compileNonEditableContent = function (content, { data }) {
+            const newContent = {};
+
+            const { token } = data;
+
+            newContent.cta__button_url = AppUrlService.getUrl('emailCheck', [token, true]);
+
+            return Object.assign({}, content, newContent);
+        };
+    }
+
+    return {
+        transformData,
+        getEmailBlocks,
+        compileNonEditableContent,
+        parametersMetadata,
     };
 }

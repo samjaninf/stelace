@@ -1,4 +1,4 @@
-/* global EmailService */
+/* global ContentEntriesService, EmailTemplateService, StelaceConfigService, User */
 
 module.exports = {
 
@@ -7,52 +7,60 @@ module.exports = {
 
 }
 
-const fs = require('fs');
-const path = require('path');
-
-function _getTemplateMetadata() {
-    const dataTypes = [
-        {
-            label: 'user_firstname',
-            type: 'string',
-        },
-        {
-            label: 'user_lastname',
-            type: 'string',
-        },
-    ];
-
-    const examples = {
-        user_firstname: 'Foo',
-        user_lastname: 'Bar',
-    };
-
-    return {
-        dataTypes,
-        examples,
-    };
-}
+const _ = require('lodash');
+const createError = require('http-errors');
 
 async function preview(req, res) {
-    const Handlebars = EmailService.getHandlebars();
+    const { template } = req.allParams();
+    let { lang } = req.allParams();
 
-    const content = fs.readFileSync(path.join(__dirname, '../../assets/emailsTemplates/general.html'), 'utf8');
-    const compiledTemplate = Handlebars.compile(content);
+    const templates = EmailTemplateService.getListTemplates();
+    if (!templates.includes(template)) {
+        throw createError(404, 'Template not found');
+    }
+    if (lang && !ContentEntriesService.isLangAllowed(lang)) {
+        throw createError(400, 'Not allowed language');
+    }
 
-    const data = {
-        previewContent: null,
-        mainTitleBlock: true,
-        mainTitle: 'Title',
-        serviceLogoUrl: null,
-    };
+    const config = await StelaceConfigService.getConfig();
+    if (!lang) {
+        lang = config.lang;
+    }
 
-    const html = compiledTemplate(data);
+    const workflow = EmailTemplateService.getTemplateWorkflow(template, { config });
+    const exampleData = Object.keys(workflow.parametersMetadata).reduce((memo, key) => {
+        const value = workflow.parametersMetadata[key];
+        memo[key] = value.exampleValue;
+        return memo;
+    });
+
+    let user;
+    if (req.user) {
+        user = req.user;
+    }
+
+    const users = await User.find().limit(100);
+    user = _.first(_.shuffle(users));
+
+    const html = await EmailTemplateService.getTemplateHTML(template, {
+        lang,
+        isPreview: false,
+        user,
+        data: exampleData,
+    });
 
     res.send(html);
 }
 
 async function getTemplateMetadata(req, res) {
-    const result = _getTemplateMetadata();
+    const { template } = req.allParams();
 
-    res.json(result);
+    const templates = EmailTemplateService.getListTemplates();
+    if (!templates.includes(template)) {
+        throw createError(404, 'Template not found');
+    }
+
+    const workflow = EmailTemplateService.getTemplateWorkflow(template);
+
+    res.json(workflow.parametersMetadata);
 }

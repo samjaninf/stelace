@@ -1,23 +1,48 @@
 general:
+    custom_goodbye:
+        en: ''
+        fr: ''
+    footer_content:
+        en: ''
+        fr: ''
     copyright:
         en: 'Copyright © {current_year}, all right reserved.'
         fr: 'Copyright © {current_year}, tous droits réservés.'
 template:
-    email_confirmation:
+    subscription_to_confirm:
+        name:
+            en: Subscription to confirm
+            fr: Confirmation d'inscription
         subject:
-        mainTitle:
-        previewContent:
-        trailingContact:
-        leadingContent:
+            en: 'Please confirm your subscription on {SERVICE_NAME}'
+            fr: 'Veuillez confirmer votre inscription sur {SERVICE_NAME}'
+        preview_content:
+            en: A simple click to validate your email
+            fr: Un simple click pour valider votre email
+        trailing_contact:
+            en: ''
+            fr: ''
+        main_title:
+            en: "Only one last step…"
+            fr: "Une dernière étape…"
+        leading_content:
+            en: ''
+            fr: ''
         content:
-        ctaButtonText:
-        ctaUrl:
-        trailingContent:
-        featuredTitle
-        featuredContent
-        endContent
-        customGoodbye
-        footerContent
-
-
-        serviceLogoUrl
+            en: ''
+            fr: ''
+        cta_button__text:
+            en: Confirm my subscription
+            fr: Confirmer mon inscription
+        trailing_content:
+            en: Please confirm your subscription on {SERVICE_NAME} by clicking on the above button.
+            fr: Nous vous invitons à confirmer votre inscription sur {SERVICE_NAME} à l’aide du bouton ci-dessus.
+        featured__title:
+            en: ''
+            fr: ''
+        featured__content:
+            en: ''
+            fr: ''
+        end_content:
+            en: ''
+            fr: ''
