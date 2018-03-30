@@ -9,13 +9,16 @@ general:
         en: 'Copyright © {current_year}, all right reserved.'
         fr: 'Copyright © {current_year}, tous droits réservés.'
 template:
-    subscription_to_confirm:
+    email_confirmation:
         name:
-            en: Subscription to confirm
-            fr: Confirmation d'inscription
+            en: Email confirmation
+            fr: Confirmation d'email
+        description:
+            en: ''
+            fr: ''
         subject:
-            en: 'Please confirm your subscription on {SERVICE_NAME}'
-            fr: 'Veuillez confirmer votre inscription sur {SERVICE_NAME}'
+            en: 'Please confirm your email address on {SERVICE_NAME}'
+            fr: 'Veuillez confirmer votre adresse email sur {SERVICE_NAME}'
         preview_content:
             en: A simple click to validate your email
             fr: Un simple click pour valider votre email
@@ -32,11 +35,11 @@ template:
             en: ''
             fr: ''
         cta_button__text:
-            en: Confirm my subscription
-            fr: Confirmer mon inscription
+            en: Confirm my email address
+            fr: Confirmer mon adresse email
         trailing_content:
-            en: Please confirm your subscription on {SERVICE_NAME} by clicking on the above button.
-            fr: Nous vous invitons à confirmer votre inscription sur {SERVICE_NAME} à l’aide du bouton ci-dessus.
+            en: Please confirm your email on {SERVICE_NAME} by clicking on the above button.
+            fr: Nous vous invitons à confirmer votre email sur {SERVICE_NAME} à l’aide du bouton ci-dessus.
         featured__title:
             en: ''
             fr: ''

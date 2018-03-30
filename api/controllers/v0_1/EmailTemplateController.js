@@ -1,19 +1,67 @@
-/* global ContentEntriesService, EmailTemplateService, StelaceConfigService, User */
+/* global ApiService, ContentEntriesService, EmailTemplateService, StelaceConfigService, User */
 
 module.exports = {
 
+    getListTemplates,
     preview,
+    edit,
     getTemplateMetadata,
+
+    findEditable,
+    updateEditable,
+    resetEditable,
+
+    findDefault,
+    updateDefault,
 
 }
 
-const _ = require('lodash');
 const createError = require('http-errors');
 
-async function preview(req, res) {
-    const { template } = req.allParams();
-    let { lang } = req.allParams();
+async function getListTemplates(req, res) {
+    const templates = EmailTemplateService.getListTemplates();
 
+    res.json({
+        templates,
+    });
+}
+
+async function preview(req, res) {
+    const { template, locale } = req.allParams();
+
+    const { html } = await _getTemplateResult({ template, lang: locale, currentUser: req.user, isEditMode: false });
+
+    res.send(html);
+}
+
+async function edit(req, res) {
+    const { template, locale } = req.allParams();
+
+    const { html } = await _getTemplateResult({ template, lang: locale, currentUser: req.user, isEditMode: true });
+
+    res.send(html);
+}
+
+async function getTemplateMetadata(req, res) {
+    const { template, locale } = req.allParams();
+
+    const { parameters } = await _getTemplateResult({ template, lang: locale, currentUser: req.user });
+    const parametersMetadata = EmailTemplateService.getParametersMetadata(template);
+
+    const filteredParameters = {};
+
+    parametersMetadata.forEach(metadata => {
+        filteredParameters[metadata.label] = parameters[metadata.label];
+    });
+
+
+    res.json({
+        parameters: filteredParameters,
+        parametersMetadata,
+    });
+}
+
+async function _getTemplateResult({ template, lang, currentUser, isEditMode }) {
     const templates = EmailTemplateService.getListTemplates();
     if (!templates.includes(template)) {
         throw createError(404, 'Template not found');
@@ -27,40 +75,93 @@ async function preview(req, res) {
         lang = config.lang;
     }
 
-    const workflow = EmailTemplateService.getTemplateWorkflow(template, { config });
-    const exampleData = Object.keys(workflow.parametersMetadata).reduce((memo, key) => {
-        const value = workflow.parametersMetadata[key];
-        memo[key] = value.exampleValue;
-        return memo;
-    });
+    const exampleData = EmailTemplateService.getExampleData(template, { config });
 
     let user;
-    if (req.user) {
-        user = req.user;
+    if (currentUser) {
+        user = currentUser;
+    } else {
+        [user] = await User.find().limit(1);
     }
 
-    const users = await User.find().limit(100);
-    user = _.first(_.shuffle(users));
-
-    const html = await EmailTemplateService.getTemplateHTML(template, {
+    const result = await EmailTemplateService.getTemplateResult(template, {
         lang,
-        isPreview: false,
+        isEditMode,
         user,
         data: exampleData,
     });
 
-    res.send(html);
+    return result;
 }
 
-async function getTemplateMetadata(req, res) {
-    const { template } = req.allParams();
+async function findEditable(req, res) {
+    const attrs = req.allParams();
 
-    const templates = EmailTemplateService.getListTemplates();
-    if (!templates.includes(template)) {
-        throw createError(404, 'Template not found');
+    // TODO: expose languages supported in config
+    const lang = ContentEntriesService.getBestLang(attrs.locale);
+
+    const translations = await ContentEntriesService.getTranslations({
+        lang,
+        displayContext: true,
+        onlyEditableKeys: false,
+        namespace: 'email',
+    });
+
+    res.json({
+        editable: translations,
+    });
+}
+
+async function updateEditable(req, res) {
+    const allowedEditor = await ApiService.isAllowed(req, 'emailEditor', 'view');
+    if (!allowedEditor) {
+        throw createError(403);
     }
 
-    const workflow = EmailTemplateService.getTemplateWorkflow(template);
+    const attrs = req.allParams();
 
-    res.json(workflow.parametersMetadata);
+    const lang = ContentEntriesService.getBestLang(attrs.locale);
+
+    const updatedTranslations = await ContentEntriesService.updateUserTranslations(lang, attrs.translations, { namespace: 'email' });
+
+    res.json(updatedTranslations);
+}
+
+async function resetEditable(req, res) {
+    const allowedEditor = await ApiService.isAllowed(req, 'emailEditor', 'view');
+    if (!allowedEditor) {
+        throw createError(403);
+    }
+
+    const attrs = req.allParams();
+
+    const lang = ContentEntriesService.getBestLang(attrs.locale);
+
+    const resetTranslations = await ContentEntriesService.resetUserTranslations(lang, attrs.translationsKeys, { namespace: 'email' });
+
+    res.json(resetTranslations);
+}
+
+async function findDefault(req, res) {
+    const attrs = req.allParams();
+
+    const lang = ContentEntriesService.getBestLang(attrs.locale);
+
+    const translations = await ContentEntriesService.fetchDefaultTranslations(lang, { namespace: 'email' });
+    res.json(translations);
+}
+
+async function updateDefault(req, res) {
+    const allowedAdminEditor = await ApiService.isAllowed(req, 'emailEditor', 'view');
+    if (!allowedAdminEditor) {
+        throw createError(403);
+    }
+
+    const attrs = req.allParams();
+
+    const lang = ContentEntriesService.getBestLang(attrs.locale);
+
+    const updatedTranslations = await ContentEntriesService.updateDefaultTranslations(lang, attrs.translations, { namespace: 'email' });
+
+    res.json(updatedTranslations);
 }

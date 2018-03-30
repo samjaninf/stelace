@@ -227,9 +227,16 @@ async function resetUserTranslations(lang, translationsKeys, { namespace }) {
     const space = namespaces[namespace];
 
     const keys = translationsKeys;
-    const { metadata } = await _getTranslations(lang, { namespace });
 
-    const editableKeys = _.intersection(keys, metadata.editableKeys); // filter out non valid editable keys
+    let editableKeys;
+
+    if (namespace !== 'email') {
+        const { metadata } = await _getTranslations(lang, { namespace });
+
+        editableKeys = _.intersection(keys, metadata.editableKeys); // filter out non valid editable keys
+    } else {
+        editableKeys = keys; // let users edit all available keys for email
+    }
 
     const existingUserTranslations = await Translation.find({ lang, key: editableKeys, namespace });
     const indexedExistingUserTranslations = _.indexBy(existingUserTranslations, 'key');

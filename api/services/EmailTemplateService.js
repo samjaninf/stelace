@@ -6,8 +6,11 @@ module.exports = {
     sendEmailTemplate,
 
     getListTemplates,
-    getTemplateHTML,
+    getTemplateResult,
     getTemplateWorkflow,
+
+    getParametersMetadata,
+    getExampleData,
 
 };
 
@@ -17,6 +20,7 @@ const path = require('path');
 const Promise = require('bluebird');
 const formatMessage = require('format-message');
 const Handlebars = require('handlebars');
+const cheerio = require('cheerio');
 
 Promise.promisifyAll(fs);
 
@@ -163,12 +167,12 @@ async function sendEmailTemplate(/* templateName, args */) {
     await Promise.resolve();
 }
 
-async function getTemplateHTML(templateName, { lang, user, isPreview, data = {} }) {
+async function getTemplateResult(templateName, { lang, user, isEditMode, data = {} }) {
     const config = await StelaceConfigService.getConfig();
 
     const emailTemplate = await fetchEmailTemplate();
     const rawContent = await getTemplateContent(templateName, lang);
-    const workflow = getTemplateWorkflow(templateName, { config });
+    const workflow = getTemplateWorkflow(templateName);
 
     // transform input data into ICU placeholders
     let parameters = {};
@@ -199,15 +203,38 @@ async function getTemplateHTML(templateName, { lang, user, isPreview, data = {} 
     }
 
     // enable or disable email blocks based on preview
-    compiledContent = computeContentBlock(compiledContent, { emailTemplateBlocks, isPreview });
+    compiledContent = computeContentBlock(compiledContent, { emailTemplateBlocks, isEditMode });
 
-    const html = getHtml(emailTemplate, compiledContent);
+    let html = getHtml(emailTemplate, compiledContent);
 
-    return html;
+    const $ = cheerio.load(html);
+    if (isEditMode) {
+        $('[data-translate]').each((i, el) => {
+            const $el = $(el);
+            const translationKey = $el.attr('data-translate');
+            if (translationKey.startsWith('_template')) {
+                const newTranslationKey = translationKey.replace('_template', `template.${templateName}`);
+                $el.attr('data-translate', newTranslationKey);
+            }
+        });
+        html = $.html();
+    } else {
+        $('[data-translate]').each((i, el) => {
+            const $el = $(el);
+            $el.removeAttr('data-translate');
+        });
+        html = $.html();
+    }
+
+    return {
+        html,
+        subject: compiledContent.subject,
+        parameters,
+    };
 }
 
 async function fetchEmailTemplate() {
-    if (emailTemplate) {
+    if (emailTemplate && sails.config.environment !== 'development') {
         return emailTemplate;
     }
 
@@ -275,7 +302,7 @@ function beforeCompileNonEditableContent(content, { config, /*data, user, lang*/
     return Object.assign({}, content, newContent);
 }
 
-function computeContentBlock(content, { emailTemplateBlocks, isPreview }) {
+function computeContentBlock(content, { emailTemplateBlocks, isEditMode }) {
     const newContent = {};
 
     const blockNames = [
@@ -288,6 +315,8 @@ function computeContentBlock(content, { emailTemplateBlocks, isPreview }) {
         'trailing_content__block',
         'featured__block',
         'end_content__block',
+        'footer_content__block',
+        'custom_goodbye__block',
     ];
 
     // use email blocks
@@ -296,7 +325,7 @@ function computeContentBlock(content, { emailTemplateBlocks, isPreview }) {
     });
 
     // if not preview, hide blocks that have no value
-    if (!isPreview) {
+    if (!isEditMode) {
         let computedBlock = {};
 
         computedBlock.trailing_contact__block = !!content.trailing_contact;
@@ -308,6 +337,8 @@ function computeContentBlock(content, { emailTemplateBlocks, isPreview }) {
         computedBlock.trailing_content__block = !!content.trailing_content;
         computedBlock.featured__block = !!content.featured__content;
         computedBlock.end_content__block = !!content.end_content;
+        computedBlock.footer_content__block = !!content.footer_content;
+        computedBlock.custom_goodbye__block = !!content.custom_goodbye;
 
         blockNames.forEach(name => {
             if (!newContent[name]) return;
@@ -319,7 +350,7 @@ function computeContentBlock(content, { emailTemplateBlocks, isPreview }) {
 }
 
 function getHtml(emailTemplate, content) {
-    if (!emailCompiledTemplate) {
+    if (!emailCompiledTemplate || sails.config.environment === 'development') {
         emailCompiledTemplate = Handlebars.compile(emailTemplate);
     }
 
@@ -354,7 +385,9 @@ function getHtml(emailTemplate, content) {
         'featured__content',
         'end_content__block',
         'end_content',
+        'custom_goodbye__block',
         'custom_goodbye',
+        'footer_content__block',
         'footer_content',
         'copyright',
     ];
@@ -373,6 +406,8 @@ function getEmailBlocks() {
         trailing_content__block: true,
         featured__block: false,
         end_content__block: true,
+        footer_content__block: true,
+        custom_goodbye__block: true,
     };
 
     return Object.assign({}, commonBlocks);
@@ -394,24 +429,16 @@ async function beforeTransformData(parameters, { config, user }) {
 
 function getListTemplates() {
     return [
-        'subscription_to_confirm',
+        'email_confirmation',
     ];
 }
 
-function getTemplateWorkflow(templateName, { config }) {
+function getTemplateWorkflow(templateName) {
     let transformData;
     let getEmailBlocks;
     let compileNonEditableContent;
-    let parametersMetadata;
 
-    parametersMetadata = {
-        SERVICE_NAME: {
-            type: 'string',
-            exampleValue: config.SERVICE_NAME,
-        },
-    };
-
-    if (templateName === 'subscription_to_confirm') {
+    if (templateName === 'email_confirmation') {
         // transformData = async function (parameters, { config, data, user, lang }) {
 
         // };
@@ -437,6 +464,28 @@ function getTemplateWorkflow(templateName, { config }) {
         transformData,
         getEmailBlocks,
         compileNonEditableContent,
-        parametersMetadata,
     };
+}
+
+function getParametersMetadata(templateName) {
+    const parametersMetadata = {
+        email_confirmation: [
+            { label: 'SERVICE_NAME', type: 'string' },
+        ],
+    };
+
+    return parametersMetadata[templateName];
+}
+
+function getExampleData(templateName/*, { config }*/) {
+    const exampleData = {
+        email_confirmation: {
+            token: {
+                id: 12,
+                value: 'sdf4ze89f23',
+            },
+        },
+    };
+
+    return exampleData[templateName];
 }
