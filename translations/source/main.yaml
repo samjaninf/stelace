@@ -659,7 +659,7 @@ time:
         fr: Année
     month_label:
         en: Month
-        fr: Year
+        fr: Mois
     from_day_label:
         en: From
         fr: Du
@@ -1565,6 +1565,9 @@ booking:
         confirm_rejection_button:
             en: Confirm the rejection
             fr: Confirmer le refus
+        confirm_booking_button:
+            en: Confirm my booking
+            fr: Confirmer ma réservation
 inbox:
     page_title:
         en: Inbox
