@@ -12,6 +12,7 @@
         service.isDateString      = isDateString;
         service.isIntersection    = isIntersection;
         service.getDurationString = getDurationString;
+        service.parseDate         = parseDate;
 
         service.isValidCronPattern = isValidCronPattern;
         service.parseCronPattern = parseCronPattern;
@@ -77,6 +78,24 @@
 
                 return hours + "h" + (minutes < 10 ? "0" + minutes : minutes);
             }
+        }
+
+        function parseDate(dateStr) {
+            if (!isDateString(dateStr, { onlyDate: true })) {
+                throw new Error('Invalid date');
+            }
+
+            var parts = dateStr.split('-');
+
+            var day = parseInt(parts[2], 10);
+            var month = parseInt(parts[1], 10);
+            var year = parseInt(parts[0], 10);
+
+            return {
+                day: day,
+                month: month,
+                year: year
+            };
         }
 
         function isValidCronPattern(pattern) {

@@ -451,7 +451,10 @@ function isValidUserType(userType) {
 }
 
 function canChangeUserType(user) {
-    return !hasPaymentAccount(user);
+    const mangopayUserId = getMangopayUserId(user);
+    const stripeAccountId = getStripeAccountId(user); // customer Stripe account doesn't need user type
+
+    return !mangopayUserId && !stripeAccountId;
 }
 
 function getMergedPaymentData(user, newPaymentData) {

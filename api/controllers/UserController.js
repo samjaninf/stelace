@@ -1,5 +1,5 @@
 /* global
-    AclService, AuthService, EmailTemplateService, GamificationService, GeneratorService,
+    AclService, AuthService, CountryService, EmailTemplateService, GamificationService, GeneratorService,
     IncomeReportService, Location, Media, MicroService, Passport, StelaceConfigService, StelaceEventService, Token, TokenService, ToolsService, User, UserService
 */
 
@@ -298,6 +298,8 @@ function updateAddress(req, res) {
         "postalCode",
         "city",
         "department",
+        "country",
+        "countryISO",
         "region",
         "latitude",
         "longitude",
@@ -313,6 +315,8 @@ function updateAddress(req, res) {
      || ! updateAttrs.city
      || ! updateAttrs.latitude
      || ! updateAttrs.longitude
+     || ! updateAttrs.country
+     || ! updateAttrs.countryISO || !CountryService.isCountry(updateAttrs.countryISO)
      || ! updateAttrs.provider || ! _.contains(Location.get("providers"), updateAttrs.provider)
      || ! updateAttrs.remoteId
     ) {

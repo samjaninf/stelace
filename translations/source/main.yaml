@@ -699,6 +699,24 @@ user:
     lastname_label:
         en: Last name
         fr: Nom
+    legal_representative_info_label:
+        en: Legal representative information
+        fr: Informations du représentant légal
+    organization_name_label:
+        en: Organization name
+        fr: Nom de l'organisation
+    organization_type_label:
+        en: Organization type
+        fr: Type de l'organisation
+    organization_label:
+        en: Organization
+        fr: Organisation
+    company_label:
+        en: Company
+        fr: Entreprise
+    soletrader_label:
+        en: Sole trader
+        fr: Entrepreneur individuel
     user_type_label:
         en: Status
         fr: Statut
@@ -708,12 +726,12 @@ user:
     user_type_organization:
         en: Organization
         fr: Professionnel
-    organization_label:
-        en: Organization name
-        fr: Nom de l'organisation
     email_label:
         en: Email Address
         fr: Adresse email
+    organization_email_label:
+        en: Organization Email Address
+        fr: Adresse email de l'organisation
     date_of_birth_label:
         en: Date of birth
         fr: Date de naissance
@@ -1665,12 +1683,33 @@ inbox:
         helper_message:
             en: Please have them ready.
             fr: Nous vous invitons à vous munir de votre RIB.
+        owner_name:
+            en: Owner name of the bank account
+            fr: Nom du propriétaire du compte bancaire
+        bank_account_country_label:
+            en: Bank account country
+            fr: Pays du compte bancaire
         location:
             en: Address specified on your bank details
             fr: Adresse indiquée sur mon RIB
+        organization_location:
+            en: Organization address
+            fr: Adresse de l'organisation
+        social_security_number_last4:
+            en: Social security number (last 4 characters)
+            fr: Numéro de sécurité sociale (4 derniers caractères)
+        identity_card_number:
+            en: Identity card number
+            fr: Numéro de carte d'identité
+        organization_tax_id:
+            en: EIN / Company number / Business number
+            fr: Numéro SIREN
+        legal_representative_location:
+            en: Legal representative address
+            fr: Addresse du représentant légal
         location_placeholder:
-            en: Give your address
-            fr: Renseignez votre adresse
+            en: Give the address
+            fr: Renseignez l'adresse
         iban:
             en: IBAN
             fr: IBAN
@@ -2212,6 +2251,9 @@ pages:
         country_of_residence_label:
             en: Country of residence
             fr: Pays de résidence
+        nationality_label:
+            en: Nationality
+            fr: Nationalité
         only_adult_payment_label:
             en: Only adults are allowed to proceed with payment.
             fr: Seuls les majeurs sont autorisés à effectuer des paiements.

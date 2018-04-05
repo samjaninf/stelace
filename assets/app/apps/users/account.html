@@ -127,8 +127,7 @@
                     </div>
                 </div>
                 <div class="account__user-type text-left" ng-if="!config.is_internal_service">
-                    <label for="user-description"
-                        data-translate="user.user_type_label">
+                    <label data-translate="user.user_type_label">
                     </label>
                     <div class="flex-container flex-form-line margin-bottom-plus">
                         <div class="flex-container flex--align-center">
@@ -155,16 +154,16 @@
                         </div>
                     </div>
                 </div>
-                <!-- <div class="text-left"
+                <div class="text-left"
                     data-uib-collapse="vm.editingCurrentUser.userType !== 'organization'">
                     <label for="user-organization-name"
-                        data-translate="user.organization_label">
+                        data-translate="user.organization_name_label">
                     </label>
                     <input id="user-organization-name" type="text"
                         ng-model="vm.editingCurrentUser.organizationName"
                         ng-blur="vm.updateUser()"
-                        data-translate-attr="{ placeholder: 'user.organization_label' }">
-                </div> -->
+                        data-translate-attr="{ placeholder: 'user.organization_name_label' }">
+                </div>
                 <div class="text-left"
                     ng-if="vm.currentUser.phone || vm.currentUser.emailCheck">
                     <label for="user-description"

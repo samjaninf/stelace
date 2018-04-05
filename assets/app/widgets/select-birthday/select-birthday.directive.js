@@ -10,7 +10,8 @@
             scope: {
                 yearOffset: '@?',
                 birthDate: '@?',
-                onChange: '&'
+                onChange: '&',
+                required: '=?'
             },
             templateUrl: '/assets/app/widgets/select-birthday/select-birthday.html',
             link: link

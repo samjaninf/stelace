@@ -146,100 +146,141 @@
 
                 <h2 data-translate="pages.booking_payment.billing_information_title"></h2>
                 <div class="flex-form__fields"> <!-- noAccount to avoid block disappearance -->
-                    <!-- <div class="flex-container flex-form-line margin-bottom-plus">
-                        <div class="small-6 flex-container">
-                            <input type="radio"
-                                id="user-type-individual"
-                                name="user-type"
-                                ng-model="vm.userType"
-                                value="individual"
-                                required>
-                            <label for="user-type-individual">
-                                Personne physique
-                            </label>
-                        </div>
-                        <div class="small-6 flex-container">
-                            <input type="radio"
-                                id="user-type-organization"
-                                name="user-type"
-                                ng-model="vm.userType"
-                                value="organization"
-                                required>
-                            <label for="user-type-organization">
-                                Personne morale
-                            </label>
+                    <div uib-collapse="!vm.showUserTypeSwitch">
+                        <label for="user-description"
+                            data-translate="user.user_type_label">
+                        </label>
+                        <div class="flex-container flex-form-line margin-bottom-plus">
+                            <div class="flex-container small-6 flex--align-center">
+                                <input type="radio"
+                                    id="user-type-individual"
+                                    name="user-type"
+                                    ng-model="vm.userType"
+                                    value="individual"
+                                    ng-disabled="!vm.currentUser.canChangeUserType"
+                                    ng-change="vm.onChangeUserType()"
+                                    required>
+                                <label for="user-type-individual" data-translate="user.user_type_individual">
+                                </label>
+                            </div>
+                            <div class="flex-container small-6 flex--align-center">
+                                <input type="radio"
+                                    id="user-type-organization"
+                                    name="user-type"
+                                    ng-model="vm.userType"
+                                    value="organization"
+                                    ng-disabled="!vm.currentUser.canChangeUserType"
+                                    ng-change="vm.onChangeUserType()"
+                                    required>
+                                <label for="user-type-organization" data-translate="user.user_type_organization">
+                                </label>
+                            </div>
                         </div>
                     </div>
+
                     <div uib-collapse="vm.userType !== 'organization'">
                         <div class="flex-container">
                             <div class="small-12">
-                                <label for="taker-organizationName">
-                                    Nom de la personne morale
+                                <label for="taker-organizationName" data-translate="user.organization_name_label">
                                 </label>
                                 <input id="taker-organizationName" type="text"
-                                    ng-model="vm.organizationName"
-                                    ng-required="vm.userType === 'organization'">
+                                    ng-model="vm.info.organizationName"
+                                    ng-required="vm.requiredInfo.organizationName">
                             </div>
                         </div>
-                        <div class="flex-container margin-bottom">
+                        <div class="flex-container margin-bottom" uib-collapse="vm.booking.paymentProvider !== 'mangopay'">
                             <div class="small-12">
-                                <label for="legal-person-type">
-                                    Type de personne morale
+                                <label for="legal-person-type" data-translate="user.organization_type_label">
                                 </label>
                                 <select
                                     id="legal-person-type"
                                     class="margin-bottom"
-                                    ng-model="vm.identity.legalPersonType"
-                                    ng-required="vm.userType === 'organization'">
-                                    <option value="BUSINESS">Entreprise</option>
-                                    <option value="ORGANIZATION">Organisation</option>
-                                    <option value="SOLETRADER">Entreprise individuelle</option>
+                                    ng-model="vm.info.organizationType"
+                                    ng-required="vm.requiredInfo.organizationType">
+                                    <option value="BUSINESS" data-translate="user.company_label"></option>
+                                    <option value="ORGANIZATION" data-translate="user.organization_label"></option>
+                                    <option value="SOLETRADER" data-translate="user.soletrader_label"></option>
                                 </select>
                             </div>
                         </div>
-                    </div> -->
-                    <div class="flex-container flex-form-line">
-                        <div class="small-6">
-                            <label for="taker-firstname" data-translate="user.firstname_label">
-                            </label>
-                            <input id="taker-firstname" type="text"
-                                ng-model="vm.firstName"
-                                required>
-                        </div>
-                        <div class="small-6">
-                            <label for="taker-lastname" data-translate="user.lastname_label">
-                            </label>
-                            <input id="taker-lastname" type="text"
-                                ng-model="vm.lastName"
-                                required>
+                        <div class="flex-container margin-top-plus" uib-collapse="vm.booking.paymentProvider !== 'mangopay'">
+                            <div class="small-12">
+                                <label for="taker-organization-email" data-translate="user.organization_email_label">
+                                </label>
+                                <input id="taker-organization-email" type="email"
+                                    ng-model="vm.info.organizationEmail"
+                                    ng-required="vm.requiredInfo.organizationEmail">
+                            </div>
                         </div>
                     </div>
-                    <div class="flex-container" ng-show="vm.showEmail">
-                        <div class="small-12">
-                            <label for="taker-email" data-translate="user.email_label">
-                            </label>
-                            <input id="taker-email" type="email"
-                                ng-model="vm.email"
-                                required>
-                        </div>
-                    </div>
-                    <label for="select-birth-day">
-                        <span data-translate="user.date_of_birth_label"></span>
-                        <span class="badge tooltip-badge"
-                            data-tooltip-placement="auto top"
-                            data-tooltip-trigger="mouseenter outsideClick"
-                            uib-tooltip="{{vm.adultPaymentTooltip}}">
-                            ?
+
+                    <div uib-collapse="vm.userType !== 'organization' || vm.booking.paymentProvider === 'stripe'" class="margin-bottom">
+                        <span class="text--semibold" data-translate="user.legal_representative_info_label">
                         </span>
-                    </label>
-                    <div data-stl-select-birthday data-birth-date="{{vm.identity.birthday}}" on-change="vm.onChangeBirthday(date)"></div>
-                    <label for="select-country" data-translate="pages.booking_payment.country_of_residence_label">
-                    </label>
-                    <select id="select-country" name="booking-country"
-                        ng-model="vm.identity.countryOfResidence"
-                        data-stl-select-country
-                        data-lang="{{config.lang}}">
-                    </select>
+                    </div>
+
+                    <div>
+                        <div class="flex-container flex-form-line">
+                            <div class="small-6">
+                                <label for="taker-firstname" data-translate="user.firstname_label">
+                                </label>
+                                <input id="taker-firstname" type="text"
+                                    ng-model="vm.info.firstname"
+                                    ng-required="vm.requiredInfo.firstname">
+                            </div>
+                            <div class="small-6">
+                                <label for="taker-lastname" data-translate="user.lastname_label">
+                                </label>
+                                <input id="taker-lastname" type="text"
+                                    ng-model="vm.info.lastname"
+                                    ng-required="vm.requiredInfo.lastname">
+                            </div>
+                        </div>
+                        <div class="flex-container" uib-collapse="!vm.showEmail || vm.userType !== 'individual'">
+                            <div class="small-12">
+                                <label for="taker-email" data-translate="user.email_label">
+                                </label>
+                                <input id="taker-email" type="email"
+                                    ng-model="vm.info.email"
+                                    ng-required="vm.requiredInfo.email">
+                            </div>
+                        </div>
+                        <div ng-show="vm.booking.paymentProvider === 'mangopay'">
+                            <label for="select-birth-day">
+                                <span data-translate="user.date_of_birth_label"></span>
+                                <span class="badge tooltip-badge"
+                                    data-tooltip-placement="auto top"
+                                    data-tooltip-trigger="mouseenter outsideClick"
+                                    uib-tooltip="{{vm.adultPaymentTooltip}}">
+                                    ?
+                                </span>
+                            </label>
+                            <div data-stl-select-birthday
+                                data-birth-date="{{vm.info.birthday}}"
+                                on-change="vm.onChangeBirthday(date)"
+                                required="vm.requiredInfo.birthday"
+                            >
+                            </div>
+                            <label for="select-country" data-translate="pages.booking_payment.country_of_residence_label">
+                            </label>
+                            <select id="select-country" name="booking-country"
+                                ng-model="vm.info.countryOfResidence"
+                                data-stl-select-country
+                                data-lang="{{config.lang}}"
+                                ng-change="vm.onChangeCountry()"
+                                ng-required="vm.requiredInfo.countryOfResidence">
+                            </select>
+                            <label for="select-nationality" data-translate="pages.booking_payment.nationality_label">
+                            </label>
+                            <select id="select-nationality" name="booking-nationality"
+                                ng-model="vm.info.nationality"
+                                data-stl-select-country
+                                data-lang="{{config.lang}}"
+                                ng-change="vm.onChangeNationality()"
+                                ng-required="vm.requiredInfo.nationality">
+                            </select>
+                        </div>
+                    </div>
                     <!-- <button class="button" ng-click="vm.createAccount()">Enregistrer mon identité</button> -->
                 </div>
 

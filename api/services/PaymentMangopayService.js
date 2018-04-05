@@ -71,8 +71,6 @@ async function getMangopayInstance() {
         throw createError('Missing Mangopay client credentials', { missingCredentials: true });
     }
 
-    console.log(clientId, passphrase)
-
     mangopayInstance = new Mangopay({
         clientId,
         clientPassword: passphrase,
@@ -201,6 +199,7 @@ async function createLegalUser(user) {
      || !kyc.data.legalRepresentativeNationality
      || !kyc.data.legalRepresentativeFirstname
      || !kyc.data.legalRepresentativeLastname
+     || !kyc.data.organizationEmail
     ) {
         throw createError(400, 'Missing KYC');
     }
@@ -208,13 +207,14 @@ async function createLegalUser(user) {
     const mangopay = await getMangopayInstance();
 
     const mangopayUser = await mangopay.Users.create({
-        Email: user.email,
+        Email: kyc.data.organizationEmail,
         Name: user.organizationName,
         LegalRepresentativeBirthday: parseInt(moment(new Date(kyc.data.legalRepresentativeBirthday)).format("X"), 10), // unix timestamp
         LegalRepresentativeCountryOfResidence: kyc.data.legalRepresentativeCountryOfResidence,
         LegalRepresentativeNationality: kyc.data.legalRepresentativeNationality,
         LegalRepresentativeFirstName: kyc.data.legalRepresentativeFirstname,
         LegalRepresentativeLastName: kyc.data.legalRepresentativeLastname,
+        LegalPersonType: kyc.data.legalPersonType,
         PersonType: 'LEGAL',
     });
 

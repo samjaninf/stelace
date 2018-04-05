@@ -66,22 +66,47 @@
         vm.thisMonth            = moment().month() + 1;
         vm.showPromptPhone      = vm.isSmsActive && _.includes(['show', 'require'], stlConfig.phone_prompt__taker_level);
         vm.isPhoneRequired      = vm.isSmsActive && stlConfig.phone_prompt__taker_level === 'require';
+        vm.nationalityChanged   = false;
+        vm.showUserTypeSwitch   = false;
+        vm.info = {
+            firstname: null,
+            lastname: null,
+            email: null,
+            birthday: null,
+            nationality: null,
+            countryOfResidence: null,
+            organizationName: null,
+            organizationType: null,
+            organizationEmail: null,
+        };
+        vm.requiredInfo = {
+            firstname: false,
+            lastname: false,
+            email: false,
+            birthday: false,
+            nationality: false,
+            countryOfResidence: false,
+            organizationName: false,
+            organizationType: false,
+            organizationEmail: false,
+        };
 
         vm.footerTestimonials   = true;
 
-        vm.onChangeBirthday = onChangeBirthday;
         vm.cardsToggle   = cardsToggle;
         vm.createAccount = createAccount;
         vm.saveCard      = saveCard;
         vm.createPayment = createPayment;
+        vm.onChangeUserType = onChangeUserType;
+        vm.onChangeBirthday = onChangeBirthday;
+        vm.onChangeCountry = onChangeCountry;
+        vm.onChangeNationality = onChangeNationality;
 
         activate();
 
 
 
         function activate() {
-            moment.locale("fr");
-
             if (! $stateParams.id) {
                 return $state.go("inbox");
             }
@@ -146,24 +171,18 @@
                     return card.paymentProvider === vm.booking.paymentProvider;
                 });
                 vm.noImage       = (results.myImage.url === platform.getDefaultProfileImageUrl());
-                vm.identity      = {
-                    birthday: kyc.data.birthday,
-                    nationality: kyc.data.nationality || "FR",
-                    countryOfResidence: kyc.data.countryOfResidence || "FR",
-                    legalPersonType: kyc.data.legalPersonType
-                };
 
-                vm.userType = vm.currentUser.userType;
-                vm.organizationName = vm.currentUser.organizationName;
+                vm.userType = vm.currentUser.userType || 'individual';
+
+                vm.showUserTypeSwitch = !stlConfig.is_internal_service && vm.booking.paymentProvider === 'mangopay';
+
+                setInfo(kyc);
+                setRequiredInfo();
 
                 if (vm.booking.cancellationId) {
                     ContentService.showNotification({ messageKey: 'pages.booking_payment.cancelled_booking' });
                     $state.go("inbox");
                     return $q.reject("stop");
-                }
-
-                if (! currentUser.email) {
-                    vm.showEmail = true;
                 }
 
                 if (! _.isEmpty(bookingPaymentMessages)) {
@@ -203,10 +222,6 @@
 
                 vm.listingType = vm.booking.listingType;
                 vm.listingTypeProperties = ListingTypeService.getProperties(vm.booking.listingType);
-
-                // Populate account form
-                vm.firstName = vm.currentUser.firstname;
-                vm.lastName  = vm.currentUser.lastname;
 
                 if (vm.booking.startDate && vm.booking.endDate) {
                     vm.startDate = vm.booking.startDate;
@@ -291,73 +306,254 @@
             vm.selectedCard = vm.reuseCard ? vm.cards[0] : null;
         }
 
+        function onChangeUserType() {
+            setRequiredInfo();
+            vm.showEmail = shouldShowEmail();
+        }
+
+        function setRequiredInfo() {
+            if (vm.booking.paymentProvider === 'stripe') {
+                vm.requiredInfo = {
+                    firstname: true,
+                    lastname: true,
+                    email: true,
+                    birthday: false,
+                    nationality: false,
+                    countryOfResidence: false,
+                    organizationName: vm.userType === 'organization',
+                    organizationType: false,
+                    organizationEmail: false
+                };
+            } else { // vm.booking.paymentProvider === 'mangopay'
+                if (vm.userType === 'individual') {
+                    vm.requiredInfo = {
+                        firstname: true,
+                        lastname: true,
+                        email: true,
+                        birthday: true,
+                        nationality: true,
+                        countryOfResidence: true,
+                        organizationName: false,
+                        organizationType: false,
+                        organizationEmail: false
+                    };
+                } else {
+                    vm.requiredInfo = {
+                        firstname: true,
+                        lastname: true,
+                        email: false,
+                        birthday: true,
+                        nationality: true,
+                        countryOfResidence: true,
+                        organizationName: true,
+                        organizationType: true,
+                        organizationEmail: true
+                    };
+                }
+            }
+        }
+
+        function setInfo(kyc) {
+            if (vm.booking.paymentProvider === 'stripe') {
+                vm.info = {
+                    firstname: vm.currentUser.firstname,
+                    lastname: vm.currentUser.lastname,
+                    email: vm.currentUser.email,
+                    birthday: null,
+                    nationality: null,
+                    countryOfResidence: null,
+                    organizationName: vm.currentUser.organizationName,
+                    organizationType: null,
+                    organizationEmail: null,
+                };
+            } else {
+                if (vm.userType === 'individual') {
+                    vm.info = {
+                        firstname: vm.currentUser.firstname,
+                        lastname: vm.currentUser.lastname,
+                        email: vm.currentUser.email,
+                        birthday: kyc.data.birthday,
+                        nationality: kyc.data.nationality,
+                        countryOfResidence: kyc.data.countryOfResidence,
+                        organizationName: null,
+                        organizationType: null,
+                        organizationEmail: null,
+                    };
+                } else { // vm.userType === 'organization'
+                    vm.info = {
+                        firstname: kyc.data.legalRepresentativeFirstname,
+                        lastname: kyc.data.legalRepresentativeLastname,
+                        email: null,
+                        birthday: kyc.data.legalRepresentativeBirthday,
+                        nationality: kyc.data.legalRepresentativeNationality,
+                        countryOfResidence: kyc.data.legalRepresentativeCountryOfResidence,
+                        organizationName: vm.currentUser.organizationName,
+                        organizationType: kyc.data.legalPersonType,
+                        organizationEmail: kyc.data.organizationEmail
+                    };
+                }
+            }
+
+            vm.showEmail = shouldShowEmail();
+        }
+
+        function shouldShowEmail() {
+            if (vm.userType === 'organization') {
+                return false;
+            }
+
+            return !vm.currentUser.email;
+        }
+
+        function checkRequiredInfo() {
+            var allValid = true;
+
+            if (vm.requiredInfo.firstname) {
+                allValid = allValid && !!vm.info.firstname;
+            }
+            if (vm.requiredInfo.lastname) {
+                allValid = allValid && !!vm.info.lastname;
+            }
+            if (vm.requiredInfo.email) {
+                allValid = allValid && !!vm.info.email;
+            }
+            if (vm.requiredInfo.birthday) {
+                allValid = allValid && !!vm.info.birthday;
+            }
+            if (vm.requiredInfo.nationality) {
+                allValid = allValid && !!vm.info.nationality;
+            }
+            if (vm.requiredInfo.countryOfResidence) {
+                allValid = allValid && !!vm.info.countryOfResidence;
+            }
+            if (vm.requiredInfo.organizationName) {
+                allValid = allValid && !!vm.info.organizationName;
+            }
+            if (vm.requiredInfo.organizationType) {
+                allValid = allValid && !!vm.info.organizationType;
+            }
+            if (vm.requiredInfo.organizationEmail) {
+                allValid = allValid && !!vm.info.organizationEmail;
+            }
+
+            return allValid;
+        }
+
         function onChangeBirthday(date) {
-            vm.identity.birthday = date;
+            vm.info.birthday = date;
+        }
+
+        function onChangeCountry() {
+            if (vm.nationalityChanged) return;
+            vm.info.nationality = vm.info.countryOfResidence;
+        }
+
+        function onChangeNationality() {
+            vm.nationalityChanged = true;
+        }
+
+        function getUpdatedInfo() {
+            var editingCurrentUser = Restangular.copy(vm.currentUser);
+            var kycAttrs = {};
+
+            if (vm.booking.paymentProvider === 'stripe') {
+                if (vm.info.firstname) {
+                    editingCurrentUser.firstname = vm.info.firstname;
+                }
+                if (vm.info.lastname) {
+                    editingCurrentUser.lastname = vm.info.lastname;
+                }
+                if (vm.info.email) {
+                    editingCurrentUser.email = vm.info.email;
+                }
+                if (vm.info.organizationName) {
+                    editingCurrentUser.organizationName = vm.info.organizationName;
+                }
+            } else {
+                if (vm.userType === 'individual') {
+                    if (vm.info.firstname) {
+                        editingCurrentUser.firstname = vm.info.firstname;
+                    }
+                    if (vm.info.lastname) {
+                        editingCurrentUser.lastname = vm.info.lastname;
+                    }
+                    if (vm.info.email) {
+                        editingCurrentUser.email = vm.info.email;
+                    }
+                    kycAttrs.birthday = vm.info.birthday;
+                    kycAttrs.nationality = vm.info.nationality;
+                    kycAttrs.countryOfResidence = vm.info.countryOfResidence;
+                } else {
+                    if (vm.info.firstname) {
+                        kycAttrs.legalRepresentativeFirstname = vm.info.firstname;
+                    }
+                    if (vm.info.lastname) {
+                        kycAttrs.legalRepresentativeLastname = vm.info.lastname;
+                    }
+                    if (vm.info.organizationName) {
+                        editingCurrentUser.organizationName = vm.info.organizationName;
+                    }
+                    kycAttrs.legalRepresentativeBirthday = vm.info.birthday;
+                    kycAttrs.legalRepresentativeNationality = vm.info.nationality;
+                    kycAttrs.legalRepresentativeCountryOfResidence = vm.info.countryOfResidence;
+                    kycAttrs.legalPersonType = vm.info.organizationType;
+                    kycAttrs.organizationEmail = vm.info.organizationEmail;
+                }
+
+                editingCurrentUser.userType = vm.userType || editingCurrentUser.userType;
+            }
+
+            return {
+                editingCurrentUser: editingCurrentUser,
+                kycAttrs: kycAttrs
+            };
         }
 
         function createAccount() {
-            var updateAttrs = [
-                "firstname",
-                "lastname",
-                "userType",
-            ];
-            if (vm.isSmsActive) {
-                updateAttrs.push('phone');
-            }
+            var validBirthday    = ! isNaN(new Date(vm.info.birthday));
 
-            var editingCurrentUser = Restangular.copy(vm.currentUser);
-            var validBirthday    = ! isNaN(new Date(vm.identity.birthday));
+            var isAllInfoProvided = checkRequiredInfo();
 
             // Check if all needed info was provided
-            if (! vm.identity.birthday
-                || ! vm.identity.nationality
-                || ! vm.identity.countryOfResidence
-                || ! vm.firstName
-                || ! vm.lastName
-            ) {
+            if (!isAllInfoProvided) {
                 ContentService.showNotification({
                     titleKey: 'pages.booking_payment.billing_information_title',
                     messageKey: 'form.missing_information'
                 });
                 return false;
             }
-            if (! validBirthday) {
+            if (vm.requiredInfo.birthday && ! validBirthday) {
                 var dateOfBirthError = new Error("Invalid date of birth during checkout");
                 // Should not happen since constructed above
                 // Try failing silently but payment provider likely to issue an error.
                 loggerToServer.error(dateOfBirthError);
             }
 
-            // Update User with new info
-            if (! vm.currentUser.firstname && vm.firstName) {
-                editingCurrentUser.firstname = vm.firstName;
-            }
-            if (! vm.currentUser.lastname && vm.lastName) {
-                editingCurrentUser.lastname = vm.lastName;
-            }
-            if (vm.identity.birthday) {
-                editingCurrentUser.birthday = vm.identity.birthday;
-            }
-
-            editingCurrentUser.userType = editingCurrentUser.userType || 'individual'; // TODO: the user can specify it via UI
+            var updatedInfo = getUpdatedInfo();
+            var editingCurrentUser = updatedInfo.editingCurrentUser;
+            var kycAttrs = updatedInfo.kycAttrs;
 
             return $q.when(true)
                 .then(function () {
-                    if (! _.isEqual(_.pick(editingCurrentUser, updateAttrs), _.pick(vm.currentUser, updateAttrs))) {
+                    var updateAttrs = [
+                        "firstname",
+                        "lastname",
+                        "userType",
+                        "organizationName"
+                    ];
+
+                    var shouldUpdateUser = ! _.isEqual(_.pick(editingCurrentUser, updateAttrs), _.pick(vm.currentUser, updateAttrs));
+
+                    if (shouldUpdateUser) {
                         return editingCurrentUser.patch().then(function (user) {
+                            _.assign(vm.currentUser, _.pick(user, updateAttrs));
                             return user;
                         });
-                        // needs name for mangopay account
                     }
                     return $q.when(true);
                 })
                 .then(function () {
-                    return KycService.updateKyc(kyc, {
-                        birthday: vm.identity.birthday,
-                        nationality: vm.identity.countryOfResidence, // TODO: create a input for nationality
-                        // nationality: vm.identity.nationality,
-                        countryOfResidence: vm.identity.countryOfResidence
-                    });
+                    return KycService.updateKyc(kyc, kycAttrs);
                 })
                 .then(function (newKyc) {
                     kyc = newKyc;
@@ -366,6 +562,9 @@
                     return finance.createAccount({
                         accountType: 'customer',
                         paymentProvider: vm.booking.paymentProvider
+                    })
+                    .then(function (user) {
+                        vm.currentUser.canChangeUserType = user.canChangeUserType;
                     });
                 });
         }

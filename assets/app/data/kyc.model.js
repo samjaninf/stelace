@@ -20,6 +20,8 @@
         function updateKyc(data) {
             var kyc = this;
 
+            _.assign(kyc.data, data);
+
             return kyc.customPATCH({
                 id: kyc.id,
                 data: data

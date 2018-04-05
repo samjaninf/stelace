@@ -1,5 +1,8 @@
 <div class="flex-container flex--start">
-    <select id="select-birth-day" class="select-birth-day" name="birthDay" ng-model="day" ng-change="changeDay()">
+    <select class="select-birth-day" name="birthDay"
+        ng-model="day"
+        ng-change="changeDay()"
+        ng-required="required">
         <option value="01">1</option>
         <option value="02">2</option>
         <option value="03">3</option>
@@ -32,7 +35,11 @@
         <option value="30" ng-show="30 <= maxDay">30</option>
         <option value="31" ng-show="31 <= maxDay">31</option>
     </select>
-    <select id="select-birth-month" class="select-birth-month" name="birthMonth" ng-model="month" ng-change="changeMonth()">
+    <select class="select-birth-month"
+        name="birthMonth"
+        ng-model="month"
+        ng-change="changeMonth()"
+        ng-required="required">
         <option value="01">1</option>
         <option value="02">2</option>
         <option value="03">3</option>
@@ -46,10 +53,11 @@
         <option value="11">11</option>
         <option value="12">12</option>
     </select>
-    <select id="select-birth-year" class="select-birth-year" name="birthYear"
+    <select class="select-birth-year" name="birthYear"
         ng-model="year"
         ng-change="changeYear()"
-        ng-options="year for year in years">
+        ng-options="year for year in years"
+        ng-required="required">
             <!-- Must use ngOptions to set default value. See https://github.com/angular/angular.js/issues/639 -->
     </select>
 </div>

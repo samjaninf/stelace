@@ -1,4 +1,4 @@
-/* global CountryService, TimeService */
+/* global CountryService, MicroService, TimeService */
 
 /**
  * Kyc.js
@@ -104,11 +104,23 @@ function validateData(data) {
                 break;
 
             case 'legalRepresentativeFirstname':
-                memo = typeof value === 'string';
+                memo = value && typeof value === 'string';
                 break;
 
             case 'legalRepresentativeLastname':
-                memo = typeof value === 'string';
+                memo = value && typeof value === 'string';
+                break;
+
+            case 'legalRepresentativeEmail':
+                memo = MicroService.isEmail(value);
+                break;
+
+            case 'organizationEmail':
+                memo = MicroService.isEmail(value);
+                break;
+
+            case 'organizationTaxId':
+                memo = value && typeof value === 'string';
                 break;
 
             default:
