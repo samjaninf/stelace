@@ -127,9 +127,12 @@ module.exports = {
     hasUnknownStatus,
     fetchCards,
     isExpiredAt,
+    is3DSecureRequired,
+
     parseMangopayExpirationDate,
     parseMangopayData,
-    parseStripeData,
+    parseStripeTokenData,
+    parseStripeSourceData,
 
 };
 
@@ -242,6 +245,14 @@ function isExpiredAt(card, expiredDate) {
     return (expirationYear < expiredYear || (expirationYear === expiredYear && expirationMonth < expiredMonth));
 }
 
+function is3DSecureRequired(card) {
+    if (card.paymentProvider !== 'stripe') {
+        return false; // unknown for Mangopay, so set to false
+    }
+
+    return card.data.threeDSecure === 'required';
+}
+
 function parseMangopayExpirationDate(value) {
     const result = {
         expirationMonth: null,
@@ -294,7 +305,7 @@ function parseMangopayData(rawJson) {
 }
 
 // https://stripe.com/docs/api/node#card_object
-function parseStripeData(rawJson) {
+function parseStripeTokenData(rawJson) {
     const locationFields = [
         'address_city',
         'address_country',
@@ -304,6 +315,7 @@ function parseStripeData(rawJson) {
         'address_state',
         'address_zip',
         'address_zip_check',
+        'address_postal_code',
     ];
 
     const data = {
@@ -312,7 +324,9 @@ function parseStripeData(rawJson) {
     };
 
     locationFields.forEach(field => {
-        data[field] = rawJson[field];
+        if (typeof rawJson[field] !== 'undefined') {
+            data[field] = rawJson[field];
+        }
     });
 
     return {
@@ -329,6 +343,52 @@ function parseStripeData(rawJson) {
         active: true,
         validity: null,
         fingerprint: rawJson.fingerprint,
+        data,
+    };
+}
+
+// https://stripe.com/docs/api#source_object
+function parseStripeSourceData(rawJson) {
+    const locationFields = [
+        'city',
+        'country',
+        'line1',
+        'line2',
+        'state',
+        'postal_code',
+        'zip',
+    ];
+
+    const data = {
+        ownerName: rawJson.owner.name,
+        funding: rawJson.card.funding,
+        threeDSecure: rawJson.card.three_d_secure,
+        sourceId: rawJson.id,
+        sourceStatus: rawJson.status,
+        sourceUsage: rawJson.usage,
+    };
+
+    locationFields.forEach(field => {
+        if (typeof rawJson.owner.address[field] !== 'undefined') {
+            const key = 'address_' + (field === 'postal_code' ? 'zip' : field);
+            data[key] = rawJson.owner.address[field];
+        }
+    });
+
+    return {
+        paymentProvider: 'stripe',
+        resourceOwnerId: rawJson.customer,
+        resourceId: rawJson.id,
+        expirationMonth: rawJson.card.exp_month,
+        expirationYear: rawJson.card.exp_year,
+        country: rawJson.card.country,
+        currency: rawJson.currency,
+        provider: null,
+        type: rawJson.card.brand,
+        alias: rawJson.card.last4,
+        active: true,
+        validity: null,
+        fingerprint: rawJson.card.fingerprint,
         data,
     };
 }

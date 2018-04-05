@@ -34,7 +34,8 @@ async function create(req, res) {
     const {
         cardRegistrationId,
         registrationData,
-        cardToken,
+        tokenId,
+        sourceId,
         forget,
         paymentProvider,
     } = req.allParams();
@@ -66,14 +67,15 @@ async function create(req, res) {
             forget,
         });
     } else if (paymentProvider === 'stripe') {
-        if (!cardToken) {
+        if (!sourceId && !tokenId) {
             throw createError(400);
         }
 
         try {
             card = await PaymentStripeService.createCard({
                 user: req.user,
-                sourceId: cardToken,
+                sourceId,
+                tokenId,
                 forget,
             });
         } catch (err) {

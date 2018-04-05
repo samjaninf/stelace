@@ -2,7 +2,7 @@
     Assessment, AssessmentService, Booking, BookingService, BookingGamificationService,
     Cancellation, CancellationService, ContractService, Conversation,
     EmailTemplateService, FileCachingService, GeneratorService, Listing, Location, Message,
-    ModelSnapshot, PaymentMangopayService, PaymentService, SmsTemplateService,
+    ModelSnapshot, PaymentMangopayService, PaymentService, PaymentStripeService, SmsTemplateService,
     StelaceConfigService, StelaceEventService, Token, TransactionService, User
 */
 
@@ -370,7 +370,6 @@ async function payment(req, res) {
 
     const skipPayment = Booking.shouldPaymentBeSkipped(booking, operation, transactionManager);
 
-    try {
     if (!skipPayment) {
         const result = await PaymentService.createPreauthorization({
             booking,
@@ -404,10 +403,6 @@ async function payment(req, res) {
     });
 
     res.json(Booking.expose(updatedBooking, access));
-}catch(err) {
-    console.log(err)
-    throw err
-}
 }
 
 async function paymentSecure(req, res) {
@@ -416,6 +411,7 @@ async function paymentSecure(req, res) {
     const tokenValue = req.param("v");
     const tokenType = req.param("t");
     const userId = req.param("u");
+    const sourceId = req.param('source');
 
     let redirectUrl = '/confirmation/' + id;
 
@@ -493,6 +489,33 @@ async function paymentSecure(req, res) {
                 operation,
                 req,
             });
+        } else if (booking.paymentProvider === 'stripe') {
+            const source = await PaymentStripeService.fetchSource(sourceId);
+
+            if (source.status === 'failed') {
+                throw createError('3DSecure failed', { errorType: '3dsecure_fail' });
+            } else if (source.status !== 'chargeable') {
+                throw createError('Source is not chargeable', {
+                    errorType: 'paymentError',
+                });
+            }
+
+            // create a charge based on the 3Dsecure source
+            const result = await PaymentService.createPreauthorization({
+                booking,
+                sourceId: source.id,
+                operation,
+                logger: req.logger,
+            });
+
+            await PaymentService.afterPreauthorizationReturn({
+                booking,
+                providerData: result.providerData,
+                operation,
+                req,
+            });
+        } else {
+            throw new Error('Unknown payment provider');
         }
 
         await _afterPaymentSuccess({

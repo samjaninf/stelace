@@ -23,6 +23,9 @@ module.exports = {
     refreshCard,
     deactivateCard,
 
+    fetchSource,
+    create3DSecureSource,
+
     fetchCharge,
     createCharge,
     captureCharge,
@@ -251,12 +254,18 @@ async function fetchCard(providerCardId, customerId) {
  * @param {String} sourceId
  * @param {Boolean} forget
  */
-async function createCard({ user, sourceId, forget }) {
+async function createCard({ user, sourceId, tokenId, forget }) {
     const stripe = await getStripeInstance();
 
     const customerId = User.getStripeCustomerId(user);
-    const providerCard = await stripe.customers.createSource(customerId, { source: sourceId });
-    const parsedCard = Card.parseStripeData(providerCard);
+    const data = await stripe.customers.createSource(customerId, { source: sourceId || tokenId });
+
+    let parsedCard;
+    if (sourceId) {
+        parsedCard = Card.parseStripeSourceData(data);
+    } else if (tokenId) {
+        parsedCard = Card.parseStripeTokenData(data);
+    }
     parsedCard.userId = user.id;
 
     if (typeof forget !== 'undefined') {
@@ -301,22 +310,61 @@ async function fetchCharge(chargeId) {
 }
 
 /**
+ * @param {String} sourceId
+ */
+async function fetchSource(sourceId) {
+    const stripe = await getStripeInstance();
+
+    const source = await stripe.sources.retrieve(sourceId);
+    return source;
+}
+
+/**
+ * @param {Number} amount
+ * @param {String} currency
+ * @param {String} sourceId
+ * @param {String} returnUrl
+ */
+async function create3DSecureSource({
+    amount,
+    currency,
+    sourceId,
+    returnUrl,
+}) {
+    const stripe = await getStripeInstance();
+
+    const source = await stripe.sources.create({
+        type: 'three_d_secure',
+        amount: CurrencyService.getISOAmount(amount, currency),
+        currency,
+        redirect: {
+            return_url: returnUrl,
+        },
+        three_d_secure: {
+            card: sourceId,
+        },
+    });
+
+    return source;
+}
+
+/**
  * @param {Object} user
+ * @param {String} sourceId - if sourceId specified, has priority on card
  * @param {Object} card
  * @param {Number} amount
  * @param {String} currency
- * @param {Boolean} [setSecureMode = false]
- * @param {String} [returnUrl]
+ * @param {Boolean} capture
+ * @param {String} [transferGroup]
  */
 async function createCharge({
     user,
+    sourceId,
     card,
     amount,
     currency,
     capture = true,
     transferGroup,
-    // setSecureMode = false,
-    // returnUrl,
 }) {
     const stripe = await getStripeInstance();
 
@@ -326,7 +374,7 @@ async function createCharge({
         amount: CurrencyService.getISOAmount(amount, currency),
         currency,
         customer: customerId,
-        source: card.resourceId,
+        source: sourceId || card.resourceId,
         capture,
         transfer_group: transferGroup,
     });

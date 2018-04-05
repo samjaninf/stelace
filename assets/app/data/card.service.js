@@ -12,6 +12,7 @@
 
         service.getStripeCardElement = getStripeCardElement;
         service.createStripeCardToken = createStripeCardToken;
+        service.createStripeCardSource = createStripeCardSource;
 
         Restangular.extendModel("card", function (obj) {
             return Card.mixInto(obj);
@@ -29,7 +30,8 @@
             return service.post({
                 cardRegistrationId: args.cardRegistrationId,
                 registrationData: args.registrationData,
-                cardToken: args.cardToken,
+                tokenId: args.tokenId,
+                sourceId: args.sourceId,
                 forget: args.forget,
                 paymentProvider: args.paymentProvider
             });
@@ -94,6 +96,22 @@
             return $q.resolve()
                 .then(function () {
                     return stripe.createToken(card);
+                })
+                .then(function (res) {
+                    if (res.error) {
+                        return $q.reject(res.error);
+                    }
+
+                    return res;
+                });
+        }
+
+        function createStripeCardSource(card) {
+            var stripe = finance.getStripe();
+
+            return $q.resolve()
+                .then(function () {
+                    return stripe.createSource(card);
                 })
                 .then(function (res) {
                     if (res.error) {

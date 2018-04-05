@@ -55,9 +55,9 @@ describe('Card', () => {
         });
     });
 
-    describe('.parseStripeData()', () => {
-        it('parses the stripe raw object', () => {
-            const rawCard = {
+    describe('.parseStripeTokenData()', () => {
+        it('parses the stripe token raw object', () => {
+            const rawJson = {
                 id: 'card_1Brrj72eZvKYlo2CzrX6Na85',
                 object: 'card',
                 address_city: null,
@@ -84,7 +84,7 @@ describe('Card', () => {
                 tokenization_method: null
             };
 
-            const parsedData = Card.parseStripeData(rawCard);
+            const parsedData = Card.parseStripeTokenData(rawJson);
             const expected = {
                 paymentProvider: 'stripe',
                 resourceOwnerId: 'cus_CGMd3eZanFamae',
@@ -110,6 +110,92 @@ describe('Card', () => {
                     address_state: null,
                     address_zip: null,
                     address_zip_check: null,
+                },
+            };
+            expect(parsedData).to.deep.equal(expected);
+        });
+    });
+
+    describe('.parseStripeSourceData()', () => {
+        it('parses the stripe source raw object', () => {
+            const rawJson = {
+                id: 'src_1CDa4zD1n4vDro1gFJh3Vy9m',
+                object: 'source',
+                amount: null,
+                client_secret: 'src_client_secret_Ccpkcv8q30PygtV9whLEqVUa',
+                created: 1522942369,
+                currency: null,
+                customer: 'cus_CcpRNohufSgalT',
+                flow: 'none',
+                livemode: false,
+                metadata: {},
+                owner: {
+                    address: {
+                        city: null,
+                        country: null,
+                        line1: null,
+                        line2: null,
+                        postal_code: '46789',
+                        state: null,
+                    },
+                    email: null,
+                    name: null,
+                    phone: null,
+                    verified_address: null,
+                    verified_email: null,
+                    verified_name: null,
+                    verified_phone: null,
+                },
+                statement_descriptor: null,
+                status: 'chargeable',
+                type: 'card',
+                usage: 'reusable',
+                card: {
+                    exp_month: 4,
+                    exp_year: 2024,
+                    address_zip_check: 'pass',
+                    brand: 'Visa',
+                    card_automatically_updated: false,
+                    country: 'US',
+                    cvc_check: 'pass',
+                    fingerprint: '6fd31TMkReoFB5vt',
+                    funding: 'credit',
+                    last4: '4242',
+                    three_d_secure: 'optional',
+                    address_line1_check: null,
+                    tokenization_method: null,
+                    dynamic_last4: null,
+                },
+            };
+
+            const parsedData = Card.parseStripeSourceData(rawJson);
+            const expected = {
+                paymentProvider: 'stripe',
+                resourceOwnerId: 'cus_CcpRNohufSgalT',
+                resourceId: 'src_1CDa4zD1n4vDro1gFJh3Vy9m',
+                expirationMonth: 4,
+                expirationYear: 2024,
+                currency: null,
+                provider: null,
+                type: 'Visa',
+                alias: '4242',
+                active: true,
+                validity: null,
+                fingerprint: '6fd31TMkReoFB5vt',
+                country: 'US',
+                data: {
+                    ownerName: null,
+                    funding: 'credit',
+                    address_city: null,
+                    address_country: null,
+                    address_zip: '46789',
+                    address_line1: null,
+                    address_line2: null,
+                    address_state: null,
+                    threeDSecure: 'optional',
+                    sourceId: 'src_1CDa4zD1n4vDro1gFJh3Vy9m',
+                    sourceStatus: 'chargeable',
+                    sourceUsage: 'reusable',
                 },
             };
             expect(parsedData).to.deep.equal(expected);

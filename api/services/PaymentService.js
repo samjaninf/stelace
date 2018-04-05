@@ -20,6 +20,7 @@ const _ = require('lodash');
  *
  * @param {Object} booking
  * @param {Number} cardId
+ * @param {String} sourceId
  * @param {String} operation
  * @param {Object} req
  * @param {Object} logger
@@ -27,29 +28,35 @@ const _ = require('lodash');
  * @return {String} res.redirectUrl
  * @return {Object} res.providerData
  */
-async function createPreauthorization({ booking, cardId, operation, req, logger }) {
+async function createPreauthorization({ booking, cardId, sourceId, operation, req, logger }) {
     const taker = await User.findOne({ id: booking.takerId });
     if (!taker) {
         throw new Error('Taker not found');
     }
 
-    const card = await Card.findOne({ id: cardId });
-    if (!card) {
-        throw new Error('Card not found');
-    }
-    if (card.userId !== taker.id) {
-        throw createError(403);
-    }
-    if (Card.isInvalid(card)) {
-        throw createError(400, 'Card invalid');
-    }
-    if (!card.active) {
-        throw createError(400, 'Card inactive');
-    }
+    let card;
 
-    const enoughExpiration = _isCardExpirationEnough(booking, card);
-    if (!enoughExpiration) {
-        throw createError(400, 'Expiration date too short', { errorType: 'expiration_date_too_short' });
+    // fetch card if no source specified
+    // source is specified when using 3Dsecure for Stripe
+    if (!sourceId) {
+        card = await Card.findOne({ id: cardId });
+        if (!card) {
+            throw new Error('Card not found');
+        }
+        if (card.userId !== taker.id) {
+            throw createError(403);
+        }
+        if (Card.isInvalid(card)) {
+            throw createError(400, 'Card invalid');
+        }
+        if (!card.active) {
+            throw createError(400, 'Card inactive');
+        }
+
+        const enoughExpiration = _isCardExpirationEnough(booking, card);
+        if (!enoughExpiration) {
+            throw createError(400, 'Expiration date too short', { errorType: 'expiration_date_too_short' });
+        }
     }
 
     const setSecureMode = _.includes(['deposit', 'deposit-payment'], operation);
@@ -90,9 +97,7 @@ async function createPreauthorization({ booking, cardId, operation, req, logger 
             });
             logger.error({ err: error });
 
-            console.log(preauthorization)
             const errorType = PaymentMangopayService.getErrorType(preauthorization.ResultCode);
-            console.log(errorType)
 
             throw createError(400, 'preauthorization fail', { errorType });
         }
@@ -104,24 +109,42 @@ async function createPreauthorization({ booking, cardId, operation, req, logger 
             preauthorization,
         };
     } else if (booking.paymentProvider === 'stripe') {
-        let charge;
+        if (sourceId || card.data.threeDSecure === 'not_supported') {
+            try {
+                const charge = await PaymentStripeService.createCharge({
+                    user: taker,
+                    sourceId,
+                    card,
+                    amount,
+                    currency: booking.currency,
+                    capture: false,
+                });
 
-        try {
-            charge = await PaymentStripeService.createCharge({
-                user: taker,
-                card,
-                amount,
-                currency: booking.currency,
-                capture: false,
-            });
-        } catch (err) {
-            const errorType = PaymentStripeService.getErrorType(err);
-            throw createError(400, 'preauthorization fail', { errorType });
+                result.providerData = {
+                    charge,
+                };
+            } catch (err) {
+                const errorType = PaymentStripeService.getErrorType(err);
+                throw createError(400, 'preauthorization fail', { errorType });
+            }
+        } else {
+            try {
+                const source = await PaymentStripeService.create3DSecureSource({
+                    amount,
+                    currency: booking.currency,
+                    sourceId: card.resourceId,
+                    returnUrl: secureReturnUrl,
+                });
+
+                result.redirectUrl = source.redirect.url;
+                result.providerData = {
+                    source,
+                };
+            } catch (err) {
+                const errorType = PaymentStripeService.getErrorType(err);
+                throw createError(400, 'preauthorization fail', { errorType });
+            }
         }
-
-        result.providerData = {
-            charge,
-        };
     } else {
         throw new Error('Unknown payment provider');
     }
@@ -292,7 +315,7 @@ function _isCardExpirationEnough(booking, card) {
     const { TIME } = booking.listingType.properties;
 
     if (TIME !== 'TIME_FLEXIBLE') {
-        cardMinLimitDate = moment().format(formatDate);
+        cardMinLimitDate = new Date().toISOString();
     } else {
         cardMinLimitDate = booking.endDate;
     }

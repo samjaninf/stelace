@@ -618,10 +618,10 @@
                 return $q.reject('Invalid card');
             }
 
-            return CardService.createStripeCardToken(stripeCardElement)
+            return CardService.createStripeCardSource(stripeCardElement)
                 .then(function (res) {
                     return CardService.createCard({
-                        cardToken: res.token.id,
+                        sourceId: res.source.id,
                         paymentProvider: vm.booking.paymentProvider
                     });
                 });
